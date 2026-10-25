@@ -109,7 +109,14 @@ elif cmd == 'kill':
         (p/'exe').unlink(); (p/'exe').symlink_to(r/'vendor/unrelated'); sys.exit(0)
     if sig=='-TERM' and (r/'ignore-term').exists(): sys.exit(0)
     if p.exists(): shutil.rmtree(p)
-elif cmd == 'sleep': time.sleep(0.04)
+elif cmd == 'sleep':
+    if a and a[0] in ('5', '15'):
+        # Wait for the asynchronous fixture instead of racing a shortened clock.
+        deadline=time.monotonic()+2
+        while not (r/'fl/bt_config.xml').is_file():
+            if time.monotonic()>=deadline: sys.exit(92)
+            time.sleep(0.01)
+    else: time.sleep(0.04)
 elif cmd == 'id': print('0' if a==['-u'] else 'uid=0(root) gid=0(root)')
 elif cmd == 'uname': print('armv7l' if a==['-m'] else '4.9.76')
 elif cmd == 'ps': print('fixture process listing')
@@ -285,6 +292,15 @@ class PayloadTests(unittest.TestCase):
         self.assertTrue(actions[0].startswith("mount --bind "))
         self.assertEqual(actions[1:], ["signal -TERM 237", "start-amazon"])
         self.assertTrue((d.root / "proc/226").is_dir())
+
+    def test_native_fixture_startup_can_outlive_accelerated_mock_sleep(self):
+        d = self.device()
+        original = d.amazon.read_bytes()
+        d.amazon.write_bytes(original.replace(b"#!/bin/sh\n", b"#!/bin/sh\n/bin/sleep 0.5\n", 1))
+        d.expected_hashes[0] = d.digest(d.amazon)
+        result = d.run()
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual((d.results()[0] / "bt_config.xml").read_text(), "<generated-by-native-app/>\n")
 
     def test_term_stall_kills_only_exact_amazon(self):
         d = self.device(); (d.root / "ignore-term").touch()

@@ -28,3 +28,12 @@ si_devices.xml
 original-*.xml
 bt-start-test-*/
 nb-bt-recovery-*/
+nb-a-repair.json
+nb-a-preflight/
+.nb-a-stage-*/
+NBFA*.claimed/
+bt-nand-backup.claimed/
+bt-nand-backup-*/
+bt-persistence-capture.claimed/
+bt-persistence-capture-*/
+Nextbase622GW Repairs/

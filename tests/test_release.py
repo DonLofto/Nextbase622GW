@@ -38,7 +38,8 @@ class ReleaseTests(unittest.TestCase):
                 names = archive.namelist()
                 self.assertEqual(set(names), {builder.PREFIX + n for n in builder.PUBLIC_FILES} |
                                  {builder.PREFIX + "recovery-kit/SHA256SUMS",
-                                  builder.PREFIX + builder.ADVANCED_DIRECTORY + "SHA256SUMS"})
+                                  builder.PREFIX + builder.ADVANCED_DIRECTORY + "SHA256SUMS",
+                                  builder.PREFIX + "persistent-repair/payload/SHA256SUMS"})
                 self.assertFalse(any(b"PRIVATE_" in archive.read(n) for n in names))
                 manifest = archive.read(builder.PREFIX + "recovery-kit/SHA256SUMS").decode()
                 for line in manifest.splitlines():
@@ -50,6 +51,12 @@ class ReleaseTests(unittest.TestCase):
                 for line in advanced.splitlines():
                     digest, name = line.split("  ", 1)
                     data = archive.read(builder.PREFIX + builder.ADVANCED_DIRECTORY + name)
+                    self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
+                preflight = archive.read(builder.PREFIX + "persistent-repair/payload/SHA256SUMS").decode()
+                self.assertEqual(len(preflight.splitlines()), 2)
+                for line in preflight.splitlines():
+                    digest, name = line.split("  ", 1)
+                    data = archive.read(builder.PREFIX + "persistent-repair/payload/" + name)
                     self.assertEqual(hashlib.sha256(data).hexdigest(), digest)
                 mode = archive.getinfo(builder.PREFIX + "recovery-kit/Recover Bluetooth.command").external_attr >> 16
                 self.assertTrue(mode & 0o100)
@@ -93,12 +100,13 @@ class ReleaseTests(unittest.TestCase):
                 target.write_bytes(b"original snapshot\n")
             token = root / "recovery-kit/payload/usb.console"
             advanced_token = root / builder.ADVANCED_DIRECTORY / "usb.console"
+            preflight_script = root / "persistent-repair/payload/nb-a-preflight.sh"
             read_bytes = Path.read_bytes
             changed = set()
 
             def read_then_concurrently_edit(path):
                 data = read_bytes(path)
-                if path in (token, advanced_token) and path not in changed:
+                if path in (token, advanced_token, preflight_script) and path not in changed:
                     changed.add(path)
                     path.write_bytes(b"source edited after capture\n")
                 return data
@@ -106,11 +114,12 @@ class ReleaseTests(unittest.TestCase):
             output = Path(directory) / "kit.zip"
             with mock.patch.object(Path, "read_bytes", read_then_concurrently_edit):
                 builder.build(root, output)
-            self.assertEqual(changed, {token, advanced_token}, "Both source edits must happen during this build")
+            self.assertEqual(changed, {token, advanced_token, preflight_script}, "All source edits must happen during this build")
             with zipfile.ZipFile(output) as archive:
                 for manifest_name, directory in (
                     ("recovery-kit/SHA256SUMS", "recovery-kit/payload/"),
                     (builder.ADVANCED_DIRECTORY + "SHA256SUMS", builder.ADVANCED_DIRECTORY),
+                    ("persistent-repair/payload/SHA256SUMS", "persistent-repair/payload/"),
                 ):
                     manifest = archive.read(builder.PREFIX + manifest_name).decode()
                     for line in manifest.splitlines():

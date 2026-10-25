@@ -33,9 +33,21 @@ Raw captures and populated configuration remain private because they identify th
 
 ## Packaged operation
 
-Version 0.2.0 keeps the temporary recovery as the normal double-click operation and adds a separate [advanced manual Drive A repair](internal-storage-repair.md). The temporary payload remains guarded and reboot-dependent; adding advanced assets does not make it an automatic repair installer.
+Distribution **0.3.0** adds root **`Repair Bluetooth.command`**, a macOS guided persistent-repair launcher. The separate temporary component inside `recovery-kit/` remains **0.2.0**, with unchanged payload/ownership semantics. The [manual Drive A procedure](internal-storage-repair.md) remains the reference for the frozen advanced assets.
 
-The host tool validates `Model: 622GW` and `Firmware: R13.3` in `Nextbase.info`, checks the kit manifest, refuses conflicting hooks/update files, and stages verified payloads. It creates an ownership marker for safe cleanup. Recordings and unknown files are preserved.
+### Guided persistent repair
+
+The [guided launcher](guided-repair.md) uses Python 3.9+ standard-library code, a card reader and passive body-USB capture. It verifies the kit, card identity and SD health, then stages a new read-only preflight that checks the exact runtime/vendor hashes, genuine A-backed AmbaFS and the documented default-configuration creation failure before invoking the frozen partition-capture wrapper. Complete capture sizes, read coverage, statuses, hashes and provenance must verify on the Mac.
+
+The launcher requires the harmless DRYRUN/second-cold-boot SKIP rehearsal and another clean SD check before its destructive prompt. Exact typed approval, `FORMAT DRIVE A ONCE`, is durably consumed in the private journal before staging the unchanged native format hook. It requires one BEGIN and the exact vendor completion line, then a stock cold-boot SKIP/Bluetooth startup, owner-confirmed app pairing, a read-only observer cold boot with existing-pairing reconnection and verified A-backed XML, removal of active controls, and another ordinary cold-boot app reconnection.
+
+An inert `nb-a-repair.json` on the card binds the attempt to a private UUID journal under `~/Nextbase622GW Repairs/`. Relaunch offers inspection or removal of verified unchanged owned controls only; it never resumes or re-arms a format. Claims/results/evidence remain. No videos are copied. A missing result stops progression; Ctrl+C cannot cancel an in-camera format, and no finite format deadline is proven.
+
+This new launcher and preflight are fixture-tested only, not camera-tested end to end. The previously demonstrated manual repair and frozen asset hashes do not establish physical behavior of this new orchestration. Guided execution is macOS-only; no native Windows guided repair/capture is claimed.
+
+### Temporary component
+
+The temporary host tool validates `Model: 622GW` and `Firmware: R13.3` in `Nextbase.info`, checks the kit manifest, refuses conflicting hooks/update files, and stages verified payloads. It creates an ownership marker for safe cleanup. Recordings and unknown files are preserved.
 
 The camera's root `autoexec.ash` sleeps **20000 milliseconds** and runs `/bin/sh /tmp/SD0/nb-bt-recover.sh`. RTOS output redirection is deliberately absent. The exact USB debug token is 32 ASCII bytes with no newline; its SHA256 is:
 
@@ -90,8 +102,9 @@ For provenance, the inspected firmware package `FW622GWA.bin` had SHA256 `d70a3e
 | Original RAM bind + Amazon restart | Succeeded on one physical 622GW / R13.3 |
 | Classic Bluetooth discovery | Independently observed on a Mac |
 | iPhone / Nextbase app | Owner confirmed connection and camera/recordings visible |
-| Packaged preflight and host tools | Newly implemented; automated fixture tests and independent review recorded in the repository |
-| Packaged kit end to end on camera | Not yet boot-tested |
+| Guided persistent launcher and new device preflight (0.3.0) | Fixture-tested only; not run end to end on a camera |
+| Guarded temporary payload and host tools (0.2.0) | Automated fixtures; original direct RAM operation is separate hardware evidence |
+| Guarded temporary package end to end on camera | Not yet boot-tested |
 | Advanced vendor A format and stock startup | One separately approved invocation succeeded on the examined unit |
 | Existing pairing after cold boots | User-confirmed app reconnection; stock AmbaFS/XML evidence, then hook-free ordinary-boot reconnection |
 | Temporary RAM recovery surviving reboot | No; overlay is discarded |
@@ -100,8 +113,12 @@ For provenance, the inspected firmware package `FW622GWA.bin` had SHA256 `d70a3e
 
 Automated payload tests exercise controlled shell environments, not the physical radio or RTOS. Host tests use synthetic card directories and do not establish USB/controller compatibility. PowerShell runtime and Windows-specific test coverage are described by the CI workflow and actual run results; passing a portable PowerShell run is not a Windows hardware test.
 
-Local **0.2.0** validation on 2026-10-25 passed **47 Python tests** on macOS: 16 native Bash 3.2 installer cases, 19 payload harness cases, four release cases, five advanced-asset cases and three passive-reader PTY cases. **37 Windows-installer fixture cases** passed under portable PowerShell 7.6.8 on macOS arm64. Shell syntax, payload/advanced manifests and source byte/hash checks passed. The payload harness covers attempts, refusals, owned no-ops and aborts with bounded nonempty RPC stdout; the reader tests exercise capture/no-transmit behavior through a pseudo-terminal. Independent source reviews covered host tools, payload, advanced assets, documentation and release generation. Native Windows PowerShell 5.1, Finder/CMD double-click UI and the guarded temporary package's camera boot remain untested. Advanced helper/backup/persistence operations were separately executed on the examined camera, with the limits above; that does not turn portable PowerShell or PTY tests into Windows/camera hardware tests. The GitHub workflow is included but has not been run remotely for this repository.
+Local **0.2.0** validation on 2026-10-25 passed **47 Python tests** on macOS: 16 native Bash 3.2 installer cases, 19 payload harness cases, four release cases, five advanced-asset cases and three passive-reader PTY cases. **37 Windows-installer fixture cases** passed under portable PowerShell 7.6.8 on macOS arm64. Shell syntax, payload/advanced manifests and source byte/hash checks passed. The payload harness covers attempts, refusals, owned no-ops and aborts with bounded nonempty RPC stdout; the reader tests exercise capture/no-transmit behavior through a pseudo-terminal. Independent source reviews covered host tools, payload, advanced assets, documentation and release generation.
+
+Remote GitHub Actions also passed **macOS, Ubuntu and native Windows PowerShell 5.1** jobs for the 0.2.0 [publication commit](https://github.com/DonLofto/Nextbase622GW/actions/runs/40225235687) and [release tag](https://github.com/DonLofto/Nextbase622GW/actions/runs/40225345618). Those runs establish fixture/host checks, not Finder/CMD interaction or camera behavior. The new 0.3.0 guided launcher/preflight has separate fixture coverage and remains untested on a physical camera. Advanced helper/backup/persistence operations and the exact native format hook were executed during the earlier manual repair on the examined unit, with the limits above; do not present those results as an end-to-end test of either guarded distribution.
+
+Local **0.3.0** validation passed **107 Python tests**: the existing cases plus read-only preflight, strict saved-result validation, host safety/consent and a complete synthetic guided workflow. Pseudo-terminal tests verify the guided reader receives output without transmitting. Offline parser checks recognized all six saved native boot captures; that reuses prior evidence and does not constitute a new device run. An accelerated-clock race in the temporary test harness was reproduced and fixed by waiting for its asynchronous fixture; the temporary camera payload is unchanged.
 
 ## Privacy and distribution
 
-The public release builder uses an explicit allowlist for documentation, license, host tools, generic temporary payloads, tests and the inactive advanced assets. The advanced helper is project source and its reproducibly built ARM executable; vendor firmware/binaries and captured NAND/configuration data are not distributed. Separate manifests cover temporary payloads and advanced files. Original device information, logs, XML, pairing keys, recordings and private handoff notes remain excluded. Keep capture/result folders private rather than attaching them unredacted to public issues.
+The public release builder uses an explicit allowlist for documentation, license, the guided host launcher/preflight, generic temporary tools/payloads, tests and the inactive advanced assets. The advanced helper is project source and its reproducibly built ARM executable; vendor firmware/binaries and captured NAND/configuration data are not distributed. Separate manifests cover temporary payloads, advanced files and the new read-only preflight. Original device information, logs, XML, pairing keys, recordings and private handoff notes remain excluded. Keep capture/result folders private rather than attaching them unredacted to public issues.

@@ -1,8 +1,10 @@
 # Advanced: internal Drive A repair
 
-**This manual procedure destroys the existing files/settings on internal Drive A.** It is separate from the temporary double-click recovery. It was performed once on one Nextbase **622GW / R13.3** with the specific configuration-creation fault described below. Stock Bluetooth and retained app pairing worked afterward, including after all active hooks/tokens were removed. This does not guarantee the same outcome on another camera or establish long-term NAND health.
+**This manual procedure destroys the existing files/settings on internal Drive A.** It was performed once on one Nextbase **622GW / R13.3** with the specific configuration-creation fault described below. Stock Bluetooth and retained app pairing worked afterward, including after all active hooks/tokens were removed. This does not guarantee the same outcome on another camera or establish long-term NAND health.
 
-Release **0.2.0** includes [inactive advanced assets](../advanced/internal-drive-a/). None of their hook filenames is `autoexec.ash`: a hook becomes active only when deliberately copied to the card root and renamed. The ordinary Mac/Windows launchers never select this operation. Read this entire guide before copying a hook.
+For guided execution on macOS, open root **`Repair Bluetooth.command`** from release **0.3.0** and follow the [guided repair instructions](guided-repair.md). That new launcher/preflight is fixture-tested, not camera-tested end to end. This page remains the complete manual procedure and reference; do not mix manual staging into an active guided session.
+
+The [inactive advanced assets](../advanced/internal-drive-a/) remain the exact files tested during the manual repair. None of their hook filenames is `autoexec.ash`: a hook becomes active only when deliberately copied to the card root and renamed. The older Mac/Windows launchers inside `recovery-kit/` perform temporary RAM recovery only. Read this entire guide before manually copying a hook.
 
 ## Mandatory prerequisites and stop conditions
 

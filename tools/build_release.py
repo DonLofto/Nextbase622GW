@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import zipfile
 
-VERSION = "0.2.0"
+VERSION = "0.3.0"
 PREFIX = f"Nextbase622GW-recovery-{VERSION}/"
 PAYLOAD_FILES = ("autoexec.ash", "nb-bt-recover.sh", "usb.console")
 ADVANCED_DIRECTORY = "advanced/internal-drive-a/"
@@ -18,17 +18,24 @@ ADVANCED_FILES = tuple(sorted((
     "format-a-once.autoexec.ash", "persistence.autoexec.ash",
     "bt-persistence-capture.sh",
 )))
+PREFLIGHT_DIRECTORY = "persistent-repair/payload/"
+PREFLIGHT_FILES = ("preflight.autoexec.ash", "nb-a-preflight.sh")
 PUBLIC_FILES = (
     ".gitattributes",
     ".gitignore",
     ".github/workflows/test.yml",
     "README.md",
+    "Repair Bluetooth.command",
     "CLAUDE.md",
     "LICENSE",
     "docs/technical-notes.md",
     "docs/temporary-recovery.md",
+    "docs/guided-repair.md",
     "docs/internal-storage-repair.md",
     *(ADVANCED_DIRECTORY + name for name in ADVANCED_FILES),
+    "persistent-repair/repair.py",
+    "persistent-repair/results.py",
+    *(PREFLIGHT_DIRECTORY + name for name in PREFLIGHT_FILES),
     "recovery-kit/Recover Bluetooth.command",
     "recovery-kit/Recover Bluetooth.cmd",
     "recovery-kit/prepare-macos.sh",
@@ -39,6 +46,9 @@ PUBLIC_FILES = (
     "tests/test_release.py",
     "tests/test_advanced_assets.py",
     "tests/test_capture_rtos.py",
+    "tests/test_persistent_repair.py",
+    "tests/test_persistent_results.py",
+    "tests/test_persistent_preflight.py",
     "tests/test_windows_installer.ps1",
     "tools/build_release.py",
     "tools/capture_rtos.py",
@@ -73,6 +83,10 @@ def advanced_manifest(root: Path) -> bytes:
     return file_manifest(root, ADVANCED_DIRECTORY, ADVANCED_FILES)
 
 
+def preflight_manifest(root: Path) -> bytes:
+    return file_manifest(root, PREFLIGHT_DIRECTORY, PREFLIGHT_FILES)
+
+
 def build(root: Path, output: Path) -> Path:
     root = root.resolve()
     entries = [(name, public_file(root, name).read_bytes()) for name in PUBLIC_FILES]
@@ -87,6 +101,11 @@ def build(root: Path, output: Path) -> Path:
         + "  " + name + "\n" for name in ADVANCED_FILES
     ).encode("ascii")
     entries.append((ADVANCED_DIRECTORY + "SHA256SUMS", advanced))
+    preflight = "".join(
+        hashlib.sha256(captured[PREFLIGHT_DIRECTORY + name]).hexdigest()
+        + "  " + name + "\n" for name in PREFLIGHT_FILES
+    ).encode("ascii")
+    entries.append((PREFLIGHT_DIRECTORY + "SHA256SUMS", preflight))
     output.parent.mkdir(parents=True, exist_ok=True)
     temporary = None
     try:
@@ -120,7 +139,9 @@ def main() -> None:
             raise SystemExit("Payload manifest is stale; regenerate before release.")
         if (root / ADVANCED_DIRECTORY / "SHA256SUMS").read_bytes() != advanced_manifest(root):
             raise SystemExit("Advanced manifest is stale; regenerate before release.")
-        print("Temporary payload and advanced asset manifests verified.")
+        if (root / PREFLIGHT_DIRECTORY / "SHA256SUMS").read_bytes() != preflight_manifest(root):
+            raise SystemExit("Guided preflight manifest is stale; regenerate before release.")
+        print("Temporary, advanced and guided preflight manifests verified.")
         return
     output = args.output or root / "dist" / f"Nextbase622GW-recovery-{VERSION}.zip"
     build(root, output)
