@@ -1,0 +1,33 @@
+name: Test recovery kit
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  shell-and-release:
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      # Upstream releases: github.com/actions/checkout/releases and actions/setup-python/releases
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -p 'test_*.py' -v
+      - run: python tools/build_release.py --check
+      - run: python tools/build_release.py
+
+  windows-powershell:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+      - name: Test Windows PowerShell 5.1 installer
+        shell: powershell
+        run: .\tests\test_windows_installer.ps1
