@@ -21,7 +21,8 @@ def main():
         raise SystemExit("The release build requires Python 3.12.")
     root = Path(__file__).resolve().parents[1]
     output = root / "dist" / f"Nextbase622GW-Windows-{VERSION}.zip"
-    with tempfile.TemporaryDirectory() as directory:
+    output.parent.mkdir(parents=True, exist_ok=True)
+    with tempfile.TemporaryDirectory(dir=output.parent) as directory:
         work = Path(directory)
         # Keep the runtime beside the EXE: elevated onefile extraction is discouraged upstream.
         command = [sys.executable, "-m", "PyInstaller", "--clean", "--noconfirm", "--onedir",
@@ -56,7 +57,6 @@ def main():
                 data = public_file(bundle, name).read_bytes()
                 files[name] = hashlib.sha256(data).hexdigest()
                 archive.writestr(PREFIX + name, data)
-        output.parent.mkdir(parents=True, exist_ok=True)
         os.replace(candidate, output)
         report = {"version": VERSION, "commit": os.environ.get("GITHUB_SHA"),
                   "python": platform.python_version(), "pyinstaller": importlib.metadata.version("pyinstaller"),

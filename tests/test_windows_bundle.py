@@ -14,6 +14,22 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BundleTests(unittest.TestCase):
+    def test_build_stages_on_destination_drive(self):
+        sys.path.insert(0, str(ROOT / "tools"))
+        try:
+            spec = importlib.util.spec_from_file_location("build_windows", ROOT / "tools/build_windows.py")
+            builder = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(builder)
+        finally:
+            sys.path.pop(0)
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            with mock.patch.object(builder, "__file__", str(root / "tools/build_windows.py")), mock.patch.object(sys, "platform", "win32"), mock.patch.object(sys, "version_info", (3, 12)), mock.patch.object(builder.tempfile, "TemporaryDirectory", side_effect=RuntimeError("stop before compilation")) as stage:
+                with self.assertRaisesRegex(RuntimeError, "stop before compilation"):
+                    builder.main()
+            self.assertEqual(stage.call_args.kwargs.get("dir"), root / "dist")
+            self.assertTrue((root / "dist").is_dir())
+
     def test_source_and_frozen_resource_roots(self):
         repair = load_wizard()
         self.assertEqual(repair.resource_root(), ROOT)
