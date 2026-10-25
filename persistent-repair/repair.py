@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
-"""Guided macOS Drive A repair. All camera writes use reviewed SD hooks."""
+"""Guided macOS/Windows Drive A repair. Camera writes use reviewed SD hooks."""
 from __future__ import annotations
 
 import argparse
+from contextlib import nullcontext
 import fnmatch
 import glob
 import hashlib
@@ -18,8 +19,9 @@ import sys
 import tempfile
 import time
 import uuid
+import windows_host
 
-from results import (ADVANCED_HASHES, RepairError, digest, read_regular,
+from results import (ADVANCED_HASHES, RepairError, digest, read_regular, is_linked,
                      verify_advanced, verify_backup, verify_persistence,
                      verify_preflight)
 
@@ -34,12 +36,12 @@ PAYLOAD_NAMES = {"preflight.autoexec.ash", "nb-a-preflight.sh"}
 
 
 def exists(path):
-    return path.exists() or path.is_symlink()
+    return path.exists() or is_linked(path)
 
 
 def plain_directory(path):
     path = Path(path).expanduser().absolute()
-    if not path.is_dir() or any(p.is_symlink() for p in (path, *path.parents)):
+    if not path.is_dir() or any(is_linked(p) for p in (path, *path.parents)):
         raise RepairError("Directory is missing or linked; nothing was changed.")
     return path
 
@@ -132,19 +134,14 @@ class Journal:
     def save(self):
         plain_directory(self.directory)
         target = self.directory / "state.json"
-        if target.is_symlink():
+        if is_linked(target):
             raise RepairError("Linked session journal refused.")
         with tempfile.NamedTemporaryFile(dir=self.directory, delete=False) as stream:
             temporary = Path(stream.name)
             stream.write((json.dumps(self.data, indent=2) + "\n").encode("utf-8"))
             stream.flush()
             os.fsync(stream.fileno())
-        os.replace(temporary, target)
-        fd = os.open(self.directory, os.O_RDONLY)
-        try:
-            os.fsync(fd)
-        finally:
-            os.close(fd)
+        durable_replace(temporary, target)
 
     @classmethod
     def create(cls, base, card, identity):
@@ -201,7 +198,26 @@ def check_binding(card, journal):
         raise RepairError("Card session marker changed; no controls were changed.")
 
 
+def is_windows():
+    return os.name == "nt"
+
+
+def durable_replace(source, destination):
+    if is_windows():
+        windows_host.move_file(source, destination, replace=True)
+    else:
+        os.replace(source, destination)
+        fd = os.open(destination.parent, os.O_RDONLY)
+        try:
+            os.fsync(fd)
+        finally:
+            os.close(fd)
+
+
 def move_exclusive(source, destination):
+    if is_windows():
+        windows_host.move_file(source, destination)
+        return
     subprocess.run(["/bin/mv", "-n", str(source), str(destination)], check=True)
     if exists(source):
         raise RepairError("A destination appeared during staging; it was not overwritten.")
@@ -334,7 +350,7 @@ def read_live_capture(path, limit=32 * 1024 * 1024):
     """Poll an append-only private stream; immutable result checks stay strict."""
     if not exists(path):
         return b""
-    if any(p.is_symlink() for p in (path, *path.parents)):
+    if any(is_linked(p) for p in (path, *path.parents)):
         raise RepairError("Linked live capture refused.")
     flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
     with os.fdopen(os.open(path, flags), "rb") as stream:
@@ -348,8 +364,13 @@ def read_live_capture(path, limit=32 * 1024 * 1024):
 
 
 class MacHost:
+    label = "macOS"
+
     def __init__(self, port=None):
         self.port = port
+
+    def roots(self):
+        return glob.glob("/Volumes/*")
 
     def info(self, card):
         result = subprocess.run(["/usr/sbin/diskutil", "info", "-plist", str(card)], capture_output=True, check=True)
@@ -410,12 +431,18 @@ class MacHost:
         return data
 
 
+def default_host(port=None):
+    if is_windows():
+        return windows_host.WindowsHost(port=port, ready=boot_ready)
+    return MacHost(port)
+
+
 class Wizard:
     def __init__(self, root, volume=None, session_root=None, host=None, ask=input, say=print):
         self.root = root
         self.volume = Path(volume).expanduser().absolute() if volume else None
         self.session_root = session_root or Path.home() / "Nextbase622GW Repairs"
-        self.host, self.ask, self.say = host or MacHost(), ask, say
+        self.host, self.ask, self.say = host if host is not None else default_host(), ask, say
         self.journal = None
         self.advanced, self.payload, self.pinned = verify_kit(root)
 
@@ -434,7 +461,7 @@ class Wizard:
             candidates = [plain_directory(self.volume)]
         else:
             candidates = []
-            for name in glob.glob("/Volumes/*"):
+            for name in self.host.roots():
                 try:
                     path = plain_directory(Path(name))
                     verify_identity(path, identity)
@@ -493,7 +520,7 @@ class Wizard:
         self.journal.save()
         self.host.eject(card)
         self.say("Card safely ejected. Put it into the powered-off camera, connect the BODY USB data port")
-        self.say("to this Mac and turn it on. Keep USB power connected. Passive capture is waiting.")
+        self.say("to this computer and turn it on. Keep USB power connected. Passive capture is waiting.")
         self.say("Ctrl+C stops this launcher only. It does not stop a format or authorize another attempt.")
         data = self.host.capture(self.root / "tools/capture_rtos.py", output, phase)
         if not boot_ready(data, phase):
@@ -533,7 +560,7 @@ class Wizard:
             self.say("Owned controls removed and card ejected. Results/claims retained; this is not a success verdict.")
 
     def run(self):
-        self.say("Nextbase 622GW / R13.3 — guided internal Drive A repair (macOS)")
+        self.say("Nextbase 622GW / R13.3 — guided internal Drive A repair (" + getattr(self.host, "label", "computer") + ")")
         self.say("Formatting erases A's settings/files. Proven on one camera; this new wizard is host-tested only.")
         self.say("You need a card reader, body USB data cable, steady power and Python 3.9+.")
         self.answer("With the camera off, connect its microSD through the reader. Press Return: ")
@@ -639,14 +666,16 @@ def main(argv=None):
     parser.add_argument("--volume", type=Path, help="explicit mounted SD root if automatic selection is ambiguous")
     parser.add_argument("--port", help="an already identified passive serial path if automatic selection is ambiguous")
     args = parser.parse_args(argv)
-    if sys.platform != "darwin":
-        parser.error("The guided persistent launcher currently supports macOS only; use the documented manual path elsewhere.")
+    if sys.platform not in ("darwin", "win32"):
+        parser.error("The guided launcher supports macOS and Windows; use the manual path elsewhere.")
     if sys.version_info < (3, 9) or not sys.stdin.isatty():
         parser.error("Python 3.9+ and an interactive terminal are required; no noninteractive confirmation option exists.")
     wizard = None
     try:
-        wizard = Wizard(Path(__file__).resolve().parents[1], args.volume, host=MacHost(args.port))
-        wizard.run()
+        host = default_host(args.port)
+        wizard = Wizard(Path(__file__).resolve().parents[1], args.volume, host=host)
+        with host.awake() if hasattr(host, "awake") else nullcontext():
+            wizard.run()
         return 0
     except (RepairError, OSError, ValueError, subprocess.SubprocessError, KeyboardInterrupt) as error:
         print("Stopped: " + str(error), file=sys.stderr)

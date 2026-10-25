@@ -51,12 +51,23 @@ def _require(condition, message):
         raise RepairError(message)
 
 
+def is_linked(path):
+    """Windows junctions/cloud reparse points need the same refusal as links."""
+    path = Path(path)
+    if path.is_symlink():
+        return True
+    try:
+        return bool(getattr(path.lstat(), "st_file_attributes", 0) & 0x400)
+    except FileNotFoundError:
+        return False
+
+
 def read_regular(path, limit=32 * 1024 * 1024):
     """Bounded regular-file read; refuse links, special files and changing data."""
     path = Path(path).absolute()
     _require(isinstance(limit, int) and limit >= 0, "Invalid verification read limit.")
     try:
-        _require(not any(p.is_symlink() for p in (path, *path.parents)), "Linked verification path refused.")
+        _require(not any(is_linked(p) for p in (path, *path.parents)), "Linked verification path refused.")
         flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0)
         with os.fdopen(os.open(path, flags), "rb") as stream:
             before = os.fstat(stream.fileno())
@@ -185,7 +196,7 @@ def verify_backup(folder, hook_hash):
         _status(folder, name)
     try:
         for path in folder.iterdir():
-            _require(not path.is_symlink() and path.is_file() and not path.name.endswith(".partial") and "timeout" not in path.name.lower(),
+            _require(not is_linked(path) and path.is_file() and not path.name.endswith(".partial") and "timeout" not in path.name.lower(),
                      "Capture contains linked, partial, or timeout evidence.")
     except OSError:
         raise RepairError("Cannot inspect saved partition capture.") from None

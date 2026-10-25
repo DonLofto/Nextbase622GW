@@ -6,11 +6,18 @@
 
 **Warning:** This erases internal Drive A files/settings. The repair worked on **one 622GW running R13.3**, with pairing retained across two full power-offs. The new guided launcher is fixture-tested; it has **not** been run end to end on a camera. A zero Bluetooth MAC alone does not establish this fault.
 
-**[Download kit 0.3.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.3.0/Nextbase622GW-recovery-0.3.0.zip)** · **[Checksum](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.3.0/SHA256SUMS.txt)**
+**[Download kit 0.4.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.4.0/Nextbase622GW-recovery-0.4.0.zip)** · **[Checksum](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.4.0/SHA256SUMS.txt)**
 
 ## Open one file and follow the prompts
 
-On a **Mac**, verify the download, extract the entire ZIP, then open **`Repair Bluetooth.command`**. You need **Python 3.9+**, a microSD reader, a USB data cable connected to the camera's **body** port, and steady power. [Preparation and help](docs/guided-repair.md).
+Verify the download and extract the entire ZIP, then open the file for your computer:
+
+| Computer | Launcher |
+|---|---|
+| **Windows 10/11** | Right-click **`Repair Bluetooth.cmd` → Run as administrator** |
+| **Mac** | Open **`Repair Bluetooth.command`** |
+
+You need **Python 3.9+**, a microSD reader, a USB data cable connected to the camera's **body** port, and steady power. Both launchers use the same checks and format confirmation. [Preparation and help](docs/guided-repair.md).
 
 The launcher guides you through:
 

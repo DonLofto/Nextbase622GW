@@ -1,6 +1,6 @@
 # Guided Drive A repair
 
-Release **0.3.0** adds one macOS entry point: **`Repair Bluetooth.command`** in the extracted kit's root. It guides the persistent Drive A repair, handles the files and checks, and tells you when to move the card or reboot. The older launchers inside `recovery-kit/` still perform temporary RAM recovery only.
+Release **0.4.0** provides **`Repair Bluetooth.cmd`** on Windows and **`Repair Bluetooth.command`** on macOS, in the extracted kit's root. Both use the same persistent-repair workflow, compatibility checks and typed format confirmation. The older launchers inside `recovery-kit/` perform temporary RAM recovery only.
 
 **Formatting erases internal Drive A files/settings.** The underlying repair worked on one **Nextbase 622GW / R13.3**; pairing survived two full power-offs, including a boot without diagnostic hooks. The new host wizard and its compatibility preflight are fixture-tested, **not camera-tested end to end**. Other models/builds, long-term flash health and a working NAND restore method are unproven. A zero MAC alone is not a diagnosis.
 
@@ -8,24 +8,32 @@ Release **0.3.0** adds one macOS entry point: **`Repair Bluetooth.command`** in 
 
 You need:
 
-- A **Mac with Python 3.9 or newer** available as `python3`. The launcher uses the standard library; no Python packages or administrator access are required.
+- **Python 3.9 or newer**: available through `py -3` or `python` on Windows, or `python3` on macOS. No Python packages are required.
+- On **Windows 10/11**, right-click `Repair Bluetooth.cmd` and select **Run as administrator**. This is needed for the read-only SD check and safe ejection; it does not approve formatting Drive A. macOS does not need administrator access.
 - A working **microSD reader**, the camera's card, and a USB **data** cable for the camera body's port. The mount's port is power only.
-- Steady USB power, enough free space on the Mac for private captures, and time to follow several shutdown/card-transfer/boot prompts without interrupting the camera.
+- Steady USB power, enough free space on the computer for private captures, and time to follow several shutdown/card-transfer/boot prompts without interrupting the camera.
 - Any files, recordings or settings you want preserved already saved elsewhere. **The launcher does not copy video recordings.** Its Drive A capture is not a full NAND backup and has no proven restore route.
 
-This launcher supports **macOS only**. The [manual procedure](internal-storage-repair.md) remains available separately; native Windows passive capture is not validated. The [Windows temporary launcher](temporary-recovery.md) is a different operation.
+The Windows host uses built-in PowerShell and Win32 APIs. It checks an external FAT/exFAT card with status-only CHKDSK, locks/dismounts/ejects it, and captures a USB COM interface without sending commands. Existing baud and DTR/RTS settings are preserved; original serial settings are restored on exit. It remembers the USB interface identity across boots. Unsupported/locked readers, missing drivers or ambiguous ports stop the workflow. **Windows/camera USB behavior has not been physically validated.**
 
 ## Download, verify and open
 
-Download `Nextbase622GW-recovery-0.3.0.zip` and `SHA256SUMS.txt` from the [0.3.0 release](https://github.com/DonLofto/Nextbase622GW/releases/tag/v0.3.0) into the same folder. In Terminal, from that folder:
+Download `Nextbase622GW-recovery-0.4.0.zip` and `SHA256SUMS.txt` from the [0.4.0 release](https://github.com/DonLofto/Nextbase622GW/releases/tag/v0.4.0) into the same folder. On **Windows PowerShell**, from that folder:
+
+```powershell
+$expected, $name = (Get-Content -LiteralPath .\SHA256SUMS.txt).Trim() -split '  ', 2
+if ((Get-FileHash -LiteralPath $name -Algorithm SHA256).Hash -ine $expected) { throw 'ZIP checksum mismatch' }
+```
+
+Stop on any error. On **macOS Terminal**, from the same download folder:
 
 ```sh
 shasum -a 256 -c SHA256SUMS.txt
 ```
 
-Require the ZIP's result to be `OK`; stop on any error or mismatch. Extract the **entire** ZIP onto the Mac, outside the card. Keep its folders together.
+Require the ZIP's result to be `OK`; stop on any error or mismatch. Extract the **entire** ZIP onto the computer, outside the card. Keep its folders together; do not run from inside the ZIP.
 
-Stop recording, fully power the camera off, and connect its card through the reader. Disconnect other compatible camera cards. Open **`Repair Bluetooth.command`** from the extracted kit root and follow its Terminal prompts. Do not copy the launcher or the whole kit to the SD card.
+Stop recording, fully power the camera off, and connect its card through the reader. Disconnect other compatible camera cards. On Windows, right-click **`Repair Bluetooth.cmd` → Run as administrator**; on Mac, open **`Repair Bluetooth.command`**. Follow the prompts. Do not copy the launcher or whole kit to the SD card. Extract outside junctions, symlinks or cloud placeholder folders, which the tool refuses.
 
 If Finder will not open the launcher, open Terminal in the extracted kit root and run:
 
@@ -39,9 +47,17 @@ If card detection is ambiguous, pass its verified mounted root explicitly:
 bash 'Repair Bluetooth.command' --volume /Volumes/NEXTBASE
 ```
 
-Use your actual card path. Do not guess a disk or serial device. The launcher keeps the Mac awake while running; keep the cable and camera power connected as instructed.
+On Windows, from an **administrator Command Prompt** in the extracted kit root:
+
+```bat
+"Repair Bluetooth.cmd" --volume E:\
+```
+
+Use your actual card path/letter. Do not guess a disk or serial device. The launcher keeps the computer awake while running; keep the cable and camera power connected as instructed.
 
 If multiple serial interfaces are present, disconnect unrelated devices or pass an already identified interface with `--port PATH`. List candidates without opening them using `python3 tools/capture_rtos.py --list`.
+
+On Windows, identify the camera's USB COM interface in Device Manager, then use `"Repair Bluetooth.cmd" --volume E:\ --port COM7` with its actual port. Do not guess COM numbers or baud rates. Close other serial monitors before starting. The USB console driver must expose a COM interface; this kit does not install drivers or change PowerShell policy permanently.
 
 ## What the prompts do
 
@@ -49,13 +65,13 @@ The tool verifies the kit and camera/card identity, refuses existing hooks/updat
 
 | Phase | What happens |
 |---|---|
-| **1. Prepare** | A read-only device preflight requires the exact runtime/vendor hashes, genuine A-backed storage and the documented configuration-creation failure. The frozen reader captures Drive A. The Mac verifies lengths, read coverage, statuses, hashes and provenance. Two further cold boots must show `NBFA01_DRYRUN`, then `NBFA01_SKIP`, with the empty claim retained. The SD filesystem is checked again. |
+| **1. Prepare** | A read-only device preflight requires the exact runtime/vendor hashes, genuine A-backed storage and the documented configuration-creation failure. The frozen reader captures Drive A. The computer verifies lengths, read coverage, statuses, hashes and provenance. Two further cold boots must show `NBFA01_DRYRUN`, then `NBFA01_SKIP`, with the empty claim retained. The SD filesystem is checked again. |
 | **2. Run once** | After the warnings, approve exactly one format by typing **`FORMAT DRIVE A ONCE`**. Approval is durably consumed before the unchanged native format hook is staged. The tool requires one `NBFA02_BEGIN` and the exact vendor result **`Drive 'A' format done.`**. |
 | **3. Pair** | A stock cold boot must show `NBFA02_SKIP` and Bluetooth startup, with no second format. Stop recording, open **Connected App → Setup phone → OK**, pair using the Nextbase app, and confirm it shows the camera or recordings. |
-| **4. Verify after reboot** | The format hook is removed and a read-only observer is staged. After a full power-off, reconnect the app using its **existing pairing**, without Setup phone. The Mac checks saved configuration/pairing XML and genuine A-backed mounts, with no RAM overlay. |
+| **4. Verify after reboot** | The format hook is removed and a read-only observer is staged. After a full power-off, reconnect the app using its **existing pairing**, without Setup phone. The computer checks saved configuration/pairing XML and genuine A-backed mounts, with no RAM overlay. |
 | **5. Clean up** | Verified owned active hooks/scripts/tokens are removed; NBFA claims and results remain. After the final SD check and ejection, boot normally and confirm the existing app reconnects without pairing again. Choose **Power On** if the PC menu appears. |
 
-For each diagnostic boot, the launcher ejects the card and waits for passive USB console output. Return it to the **powered-off** camera, connect the body USB data port to this Mac, and power on. The diagnostic trigger may skip the PC menu. When prompted to retrieve results, stop recording, shut down normally, and return the card to the reader. Do not try to retrieve diagnostic results through the camera's PC menu.
+For each diagnostic boot, the launcher ejects the card and waits for passive USB console output. Return it to the **powered-off** camera, connect the body USB data port to this computer, and power on. The diagnostic trigger may skip the PC menu. When prompted to retrieve results, stop recording, shut down normally, and return the card to the reader. Do not try to retrieve diagnostic results through the camera's PC menu.
 
 Console markers alone do not prove app access. Answer app questions from what you actually see. The final success report requires both existing-pairing reconnections and removal of active controls. The tool neither flashes firmware nor guesses Bluetooth XML, repairs the SD filesystem, resets the controller or automatically retries a format.
 
@@ -67,7 +83,7 @@ Read the reported error and keep the private session folder. A failed/missing ch
 
 For safe removal of staged controls after a controlled shutdown:
 
-1. With the camera fully off, connect the **same card** through the reader and reopen `Repair Bluetooth.command` on the **same Mac**.
+1. With the camera fully off, connect the **same card** through the reader and reopen the launcher on the **same computer and account** (administrator on Windows).
 2. An existing session offers its status and private evidence path. Press Return to quit, or type **`DISARM`** and confirm card handling to remove only unchanged, verified owned controls.
 3. The tool retains claims, results, the inert session marker and private evidence, then ejects the card. Disarming is **not** a repair-success verdict.
 
@@ -75,7 +91,7 @@ Relaunching never resumes, re-arms or starts another format, even if the first a
 
 ## Evidence and privacy
 
-Each attempt stores a private UUID session under **`~/Nextbase622GW Repairs/`**, including `state.json`, identity, SD checks, console captures and retrieved preflight/Drive A/persistence results. The card's inert **`nb-a-repair.json`** binds it to that session. Keep both and use the same Mac/card throughout; do not edit the journal or move/delete it during a repair.
+Each attempt stores a private UUID session under **`%USERPROFILE%\Nextbase622GW Repairs\`** on Windows or **`~/Nextbase622GW Repairs/`** on macOS, including `state.json`, identity, SD checks, console captures and retrieved preflight/Drive A/persistence results. The card's inert **`nb-a-repair.json`** binds it to that session. Keep both and use the same computer/account/card throughout; do not edit the journal or move/delete it during repair.
 
 These captures can contain camera/phone identifiers, configuration and pairing keys. Keep them out of public commits and issues. For support, share only sanitized model, firmware, tool version, error and session phase. The launcher never copies video recordings.
 

@@ -33,17 +33,23 @@ Raw captures and populated configuration remain private because they identify th
 
 ## Packaged operation
 
-Distribution **0.3.0** adds root **`Repair Bluetooth.command`**, a macOS guided persistent-repair launcher. The separate temporary component inside `recovery-kit/` remains **0.2.0**, with unchanged payload/ownership semantics. The [manual Drive A procedure](internal-storage-repair.md) remains the reference for the frozen advanced assets.
+Distribution **0.4.0** provides root **`Repair Bluetooth.cmd`** on Windows and **`Repair Bluetooth.command`** on macOS, sharing the same guided persistent-repair workflow. The separate temporary component inside `recovery-kit/` remains **0.2.0**, with unchanged payload/ownership semantics. The [manual Drive A procedure](internal-storage-repair.md) remains the reference for the frozen advanced assets.
 
 ### Guided persistent repair
 
-The [guided launcher](guided-repair.md) uses Python 3.9+ standard-library code, a card reader and passive body-USB capture. It verifies the kit, card identity and SD health, then stages a new read-only preflight that checks the exact runtime/vendor hashes, genuine A-backed AmbaFS and the documented default-configuration creation failure before invoking the frozen partition-capture wrapper. Complete capture sizes, read coverage, statuses, hashes and provenance must verify on the Mac.
+The [guided launchers](guided-repair.md) use Python 3.9+ standard-library code, a card reader and passive body-USB capture. It verifies the kit, card identity and SD health, then stages a new read-only preflight that checks the exact runtime/vendor hashes, genuine A-backed AmbaFS and the documented default-configuration creation failure before invoking the frozen partition-capture wrapper. Complete capture sizes, read coverage, statuses, hashes and provenance must verify on the Mac.
 
 The launcher requires the harmless DRYRUN/second-cold-boot SKIP rehearsal and another clean SD check before its destructive prompt. Exact typed approval, `FORMAT DRIVE A ONCE`, is durably consumed in the private journal before staging the unchanged native format hook. It requires one BEGIN and the exact vendor completion line, then a stock cold-boot SKIP/Bluetooth startup, owner-confirmed app pairing, a read-only observer cold boot with existing-pairing reconnection and verified A-backed XML, removal of active controls, and another ordinary cold-boot app reconnection.
 
 An inert `nb-a-repair.json` on the card binds the attempt to a private UUID journal under `~/Nextbase622GW Repairs/`. Relaunch offers inspection or removal of verified unchanged owned controls only; it never resumes or re-arms a format. Claims/results/evidence remain. No videos are copied. A missing result stops progression; Ctrl+C cannot cancel an in-camera format, and no finite format deadline is proven.
 
-This new launcher and preflight are fixture-tested only, not camera-tested end to end. The previously demonstrated manual repair and frozen asset hashes do not establish physical behavior of this new orchestration. Guided execution is macOS-only; no native Windows guided repair/capture is claimed.
+The guided launchers are host/fixture-tested, not camera-tested end to end. The previously demonstrated manual repair and frozen asset hashes do not establish physical behavior of this orchestration or Windows USB transport. Windows uses a separate native host backend; camera scripts, compatibility/fault checks, typed format consent and the no-retry state machine are shared.
+
+### Windows host support
+
+The Windows backend uses read-only PowerShell storage/USB metadata plus status-only CHKDSK, rejecting internal/system/readonly or unhealthy volumes. It requires administrator context for disk checks/ejection. The native sequence locks the selected volume before dismount/eject and stops if any operation fails. Write-through file moves refuse existing staging destinations; journal replacement finishes before format staging. Junctions/reparse points are refused alongside symbolic links.
+
+USB COM capture opens exclusively, keeps the existing baud/DTR/RTS settings, uses raw 8N1 with software flow control disabled, and restores settings/timeouts on exit. The application never calls serial WriteFile or sends console commands. A captured USB instance is pinned across boots; COM ambiguity or another instance stops capture. Format completion has no automatic deadline/retry. See Microsoft's [serial DCB](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-dcb), [polling timeouts](https://learn.microsoft.com/en-us/windows/win32/api/winbase/ns-winbase-commtimeouts), [volume locking](https://learn.microsoft.com/en-us/windows/win32/api/winioctl/ni-winioctl-fsctl_lock_volume) and [write-through moves](https://learn.microsoft.com/en-us/windows/win32/api/winbase/nf-winbase-movefileexw) references.
 
 ### Temporary component
 
@@ -102,7 +108,7 @@ For provenance, the inspected firmware package `FW622GWA.bin` had SHA256 `d70a3e
 | Original RAM bind + Amazon restart | Succeeded on one physical 622GW / R13.3 |
 | Classic Bluetooth discovery | Independently observed on a Mac |
 | iPhone / Nextbase app | Owner confirmed connection and camera/recordings visible |
-| Guided persistent launcher and new device preflight (0.3.0) | Fixture-tested only; not run end to end on a camera |
+| Guided persistent launcher/device preflight (0.3.0/0.4.0) | Fixture-tested only; not run end to end on a camera |
 | Guarded temporary payload and host tools (0.2.0) | Automated fixtures; original direct RAM operation is separate hardware evidence |
 | Guarded temporary package end to end on camera | Not yet boot-tested |
 | Advanced vendor A format and stock startup | One separately approved invocation succeeded on the examined unit |

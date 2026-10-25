@@ -28,6 +28,18 @@ jobs:
       - uses: actions/checkout@v7.0.1
         with:
           persist-credentials: false
+      - uses: actions/setup-python@v7.0.0
+        with:
+          python-version: '3.12'
       - name: Test Windows PowerShell 5.1 installer
         shell: powershell
         run: .\tests\test_windows_installer.ps1
+      - name: Test shared guided repair and native Windows host
+        shell: powershell
+        run: |
+          foreach ($Pattern in @('test_persistent_results.py', 'test_persistent_repair.py', 'test_windows_guided.py', 'test_advanced_assets.py', 'test_release.py')) {
+            python -m unittest discover -s tests -p $Pattern -v
+            if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          }
+      - run: python tools/build_release.py --check
+      - run: python tools/build_release.py

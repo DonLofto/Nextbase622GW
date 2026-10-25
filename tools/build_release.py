@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import zipfile
 
-VERSION = "0.3.0"
+VERSION = "0.4.0"
 PREFIX = f"Nextbase622GW-recovery-{VERSION}/"
 PAYLOAD_FILES = ("autoexec.ash", "nb-bt-recover.sh", "usb.console")
 ADVANCED_DIRECTORY = "advanced/internal-drive-a/"
@@ -26,6 +26,7 @@ PUBLIC_FILES = (
     ".github/workflows/test.yml",
     "README.md",
     "Repair Bluetooth.command",
+    "Repair Bluetooth.cmd",
     "CLAUDE.md",
     "LICENSE",
     "docs/technical-notes.md",
@@ -35,6 +36,8 @@ PUBLIC_FILES = (
     *(ADVANCED_DIRECTORY + name for name in ADVANCED_FILES),
     "persistent-repair/repair.py",
     "persistent-repair/results.py",
+    "persistent-repair/windows_host.py",
+    "persistent-repair/windows-volume.ps1",
     *(PREFLIGHT_DIRECTORY + name for name in PREFLIGHT_FILES),
     "recovery-kit/Recover Bluetooth.command",
     "recovery-kit/Recover Bluetooth.cmd",
@@ -49,6 +52,7 @@ PUBLIC_FILES = (
     "tests/test_persistent_repair.py",
     "tests/test_persistent_results.py",
     "tests/test_persistent_preflight.py",
+    "tests/test_windows_guided.py",
     "tests/test_windows_installer.ps1",
     "tools/build_release.py",
     "tools/capture_rtos.py",
@@ -60,7 +64,7 @@ def public_file(root: Path, name: str) -> Path:
     for parent in (path, *path.parents):
         if parent == root:
             break
-        if parent.is_symlink():
+        if parent.is_symlink() or (getattr(parent.lstat(), "st_file_attributes", 0) & 0x400):
             raise ValueError(f"Refusing symlink in public file path: {name}")
     if not path.is_file():
         raise FileNotFoundError(f"Missing public release file: {name}")

@@ -2,7 +2,7 @@
 
 **This manual procedure destroys the existing files/settings on internal Drive A.** It was performed once on one Nextbase **622GW / R13.3** with the specific configuration-creation fault described below. Stock Bluetooth and retained app pairing worked afterward, including after all active hooks/tokens were removed. This does not guarantee the same outcome on another camera or establish long-term NAND health.
 
-For guided execution on macOS, open root **`Repair Bluetooth.command`** from release **0.3.0** and follow the [guided repair instructions](guided-repair.md). That new launcher/preflight is fixture-tested, not camera-tested end to end. This page remains the complete manual procedure and reference; do not mix manual staging into an active guided session.
+For guided execution, use root **`Repair Bluetooth.cmd`** as administrator on Windows or **`Repair Bluetooth.command`** on macOS from release **0.4.0**, following the [guided instructions](guided-repair.md). The host code is fixture-tested, not camera-tested end to end. This page remains the complete manual reference; do not mix manual staging into a guided session.
 
 The [inactive advanced assets](../advanced/internal-drive-a/) remain the exact files tested during the manual repair. None of their hook filenames is `autoexec.ash`: a hook becomes active only when deliberately copied to the card root and renamed. The older Mac/Windows launchers inside `recovery-kit/` perform temporary RAM recovery only. Read this entire guide before manually copying a hook.
 
@@ -31,7 +31,7 @@ python3 tools/capture_rtos.py --output ../private-rtos-backup
 
 The reader uses Python 3's standard library; verify that Python 3 is available before staging. Use a different, nonexistent private output directory for every boot. On macOS it waits up to 600 seconds for a unique `/dev/cu.usbmodem*` interface, saves raw `serial-rx.bin`, decoded `serial-rx.txt` and `serial-settings.txt`, and displays received output. Use `python3 tools/capture_rtos.py --list` to list those candidates without opening them. If automatic selection is ambiguous, or using another POSIX host, select the already identified interface with `--port PATH`; do not guess a device. The camera route was tested on macOS. Stop the reader with Ctrl+C after the required result has been saved. It sends no commands or user input to the camera, and closing it does not power the camera off. Do not open the same port in two readers or change baud/input settings as an attempted fix.
 
-This project's capture reader does **not support native Windows**. Advanced Windows use requires a separately known-working passive serial monitor and equivalent complete saved logs; that workflow has not been validated here. If you cannot reliably record the required markers, stop. The default Windows temporary-recovery launcher is separate and unchanged.
+The standalone `tools/capture_rtos.py` above remains POSIX-only. Windows users can use the [guided launcher](guided-repair.md), which integrates native passive USB COM capture and the same result checks. Physical Windows/camera behavior remains unvalidated. A manually assembled Windows workflow needs its own known-working passive monitor and complete saved logs; stop if required markers cannot be reliably recorded. The temporary launcher is a separate operation.
 
 ## Verify the assets and understand the phases
 
