@@ -10,7 +10,8 @@ Read these files, in order:
 
 1. [README.md](README.md) — supported symptoms and choice of recovery path.
 2. [docs/technical-notes.md](docs/technical-notes.md) — established failure chain, compatibility hashes and evidence limits.
-3. [docs/internal-storage-repair.md](docs/internal-storage-repair.md) — complete advanced procedure; read it before staging any advanced file.
+3. For temporary recovery, [docs/temporary-recovery.md](docs/temporary-recovery.md) — launchers, cleanup, re-arming and troubleshooting.
+4. For advanced repair, [docs/internal-storage-repair.md](docs/internal-storage-repair.md) — complete procedure; read it before staging any advanced file.
 
 Use [advanced/internal-drive-a/SHA256SUMS](advanced/internal-drive-a/SHA256SUMS) and the actual scripts/source as the execution reference. All research needed for the supported procedure is here. Private raw logs, populated XML, pairing keys and NAND captures are intentionally not published and are not prerequisites for understanding the procedure.
 
@@ -106,7 +107,7 @@ python3 -m unittest discover -s tests -p 'test_*.py' -v
 python3 tools/build_release.py --check
 ```
 
-On Windows, run the PowerShell fixture suite as documented in README. Fixture tests are not physical hardware validation. Do not rerun hardware experiments merely because a new assistant/session started.
+On Windows, run the PowerShell fixture suite in the [development checks](docs/temporary-recovery.md#development-checks). Fixture tests are not physical hardware validation. Do not rerun hardware experiments merely because a new assistant/session started.
 
 Advanced assets are frozen to their camera-tested hashes. Do not silently regenerate those trusted test expectations. Default-kit ownership text, its exact LF-terminated hash, payload manifest and fixtures must stay consistent when changing a version; a visible version-string edit alone is insufficient.
 

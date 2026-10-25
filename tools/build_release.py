@@ -26,6 +26,7 @@ PUBLIC_FILES = (
     "CLAUDE.md",
     "LICENSE",
     "docs/technical-notes.md",
+    "docs/temporary-recovery.md",
     "docs/internal-storage-repair.md",
     *(ADVANCED_DIRECTORY + name for name in ADVANCED_FILES),
     "recovery-kit/Recover Bluetooth.command",
