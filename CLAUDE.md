@@ -15,11 +15,11 @@ Read:
 
 The supported case is **622GW / R13.3** with failure to create `/tmp/FL0/bt_config.xml` on internal RTOS Drive A. A zero MAC or failed pairing alone is insufficient. Fresh device identity, fault, SD health, preservation and app checks are execution requirements, not reasons to restart research. A mismatch stops the affected write operation. Investigate another device/build/fault only when explicitly requested as separate work.
 
-The underlying vendor `format a:` repair succeeded once on one unit. Existing app pairing survived two subsequent full power-offs, including an ordinary boot after hooks/tokens were removed. The **0.4.0 Windows/macOS guided launchers are host/fixture-tested, not camera-tested end to end**. Windows/camera USB behavior is also unvalidated. Original corruption cause, long-term NAND health, physically uncorrected RAW fidelity and a working NAND restore route remain unproven.
+The underlying vendor `format a:` repair succeeded once on one unit. Existing app pairing survived two subsequent full power-offs, including an ordinary boot after hooks/tokens were removed. The **0.5.0 Windows/macOS guided launchers are host/fixture-tested, not camera-tested end to end**. Windows/camera USB behavior is also unvalidated. Original corruption cause, long-term NAND health, physically uncorrected RAW fidelity and a working NAND restore route remain unproven.
 
 ## Use the guided path
 
-Help the owner extract and verify the release. On Windows 10/11, right-click root **`Repair Bluetooth.cmd` → Run as administrator**; on macOS, open **`Repair Bluetooth.command`**. Both require **Python 3.9+, an interactive console, a working card reader, a body USB data cable and steady power**. There is no noninteractive consent option. Windows administrator access enables the read-only card check/ejection, not format approval.
+Help the owner verify and fully extract the correct release ZIP. On Windows 10/11 x64, open **`Nextbase622GW-Repair.exe`** in the Windows kit and accept the administrator prompt. Python is bundled; keep the EXE beside its `_internal` directory. On macOS, open **`Repair Bluetooth.command`** with Python 3.9+. Both require **an interactive console, a working card reader, a body USB data cable and steady power**. There is no noninteractive consent option. Windows administrator access enables the read-only card check/ejection, not format approval.
 
 The launcher already handles staging/readback, ejection, passive capture, evidence verification and this sequence:
 
@@ -58,5 +58,7 @@ python3 tools/build_release.py --check
 ```
 
 The [temporary guide](docs/temporary-recovery.md#development-checks) documents Windows PowerShell fixtures. Fixture, pseudo-terminal and CI tests do not establish camera hardware behavior. Do not rerun hardware experiments merely because another assistant/session starts, and do not conflate the manual repair result with validation of the new wizard/preflight.
+
+The Windows EXE is a portable directory build of the same Python workflow, not a separate repair implementation. The source-only `Repair Bluetooth.cmd` remains available for developers with Python. Build and test it using [Windows packaging instructions](docs/guided-repair.md#building-the-windows-download); never redistribute a lone EXE without `_internal`.
 
 Use the explicit public release allowlist. Never recursively archive the investigation workspace. Exclude private logs, device information, populated XML, pairing keys, recordings, firmware/vendor binaries, NAND captures, session journals and backups from public commits/issues. Raw private research is not required to understand or execute the supported procedure; sanitized diagnosis, files and checks are already here.

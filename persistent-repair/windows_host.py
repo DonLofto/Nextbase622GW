@@ -196,7 +196,7 @@ class WindowsHost:
     def __init__(self, port=None, ready=None, api=None, query=None):
         self.api = api if api is not None else native()
         if not self.api.is_admin():
-            raise RepairError("Right-click Repair Bluetooth.cmd and choose Run as administrator for SD checks/safe ejection.")
+            raise RepairError("Run the Windows repair launcher as administrator for SD checks/safe ejection.")
         self.port = port_name(port) if port else None
         self.instance = None
         self.ready = ready

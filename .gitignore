@@ -37,3 +37,5 @@ bt-nand-backup-*/
 bt-persistence-capture.claimed/
 bt-persistence-capture-*/
 Nextbase622GW Repairs/
+
+.venv-build/

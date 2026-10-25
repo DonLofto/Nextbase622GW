@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import zipfile
 
-VERSION = "0.4.0"
+VERSION = "0.5.0"
 PREFIX = f"Nextbase622GW-recovery-{VERSION}/"
 PAYLOAD_FILES = ("autoexec.ash", "nb-bt-recover.sh", "usb.console")
 ADVANCED_DIRECTORY = "advanced/internal-drive-a/"
@@ -37,6 +37,7 @@ PUBLIC_FILES = (
     "persistent-repair/repair.py",
     "persistent-repair/results.py",
     "persistent-repair/windows_host.py",
+    "persistent-repair/windows_entry.py",
     "persistent-repair/windows-volume.ps1",
     *(PREFLIGHT_DIRECTORY + name for name in PREFLIGHT_FILES),
     "recovery-kit/Recover Bluetooth.command",
@@ -53,8 +54,11 @@ PUBLIC_FILES = (
     "tests/test_persistent_results.py",
     "tests/test_persistent_preflight.py",
     "tests/test_windows_guided.py",
+    "tests/test_windows_bundle.py",
     "tests/test_windows_installer.ps1",
     "tools/build_release.py",
+    "tools/build_windows.py",
+    "tools/windows-build-requirements.txt",
     "tools/capture_rtos.py",
 )
 

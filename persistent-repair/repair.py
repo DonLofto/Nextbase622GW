@@ -661,11 +661,26 @@ class Wizard:
         self.say("Keep NBFA02, the inert session marker and private evidence. Do not repeat the format.")
 
 
+def resource_root():
+    directory = Path(__file__).resolve().parent
+    return directory if getattr(sys, "frozen", False) else directory.parent
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--volume", type=Path, help="explicit mounted SD root if automatic selection is ambiguous")
     parser.add_argument("--port", help="an already identified passive serial path if automatic selection is ambiguous")
+    parser.add_argument("--check-kit", action="store_true", help="verify repair files only; no device access")
     args = parser.parse_args(argv)
+    if args.check_kit:
+        try:
+            verify_kit(resource_root())
+            read_regular(Path(windows_host.__file__).with_name("windows-volume.ps1"), limit=65536)
+            print("Repair kit files verified. No device was accessed.")
+            return 0
+        except (RepairError, OSError, ValueError) as error:
+            print("Stopped: " + str(error), file=sys.stderr)
+            return 1
     if sys.platform not in ("darwin", "win32"):
         parser.error("The guided launcher supports macOS and Windows; use the manual path elsewhere.")
     if sys.version_info < (3, 9) or not sys.stdin.isatty():
@@ -673,7 +688,7 @@ def main(argv=None):
     wizard = None
     try:
         host = default_host(args.port)
-        wizard = Wizard(Path(__file__).resolve().parents[1], args.volume, host=host)
+        wizard = Wizard(resource_root(), args.volume, host=host)
         with host.awake() if hasattr(host, "awake") else nullcontext():
             wizard.run()
         return 0

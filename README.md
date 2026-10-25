@@ -6,18 +6,16 @@
 
 **Warning:** This erases internal Drive A files/settings. The repair worked on **one 622GW running R13.3**, with pairing retained across two full power-offs. The new guided launcher is fixture-tested; it has **not** been run end to end on a camera. A zero Bluetooth MAC alone does not establish this fault.
 
-**[Download kit 0.4.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.4.0/Nextbase622GW-recovery-0.4.0.zip)** · **[Checksum](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.4.0/SHA256SUMS.txt)**
+## Download and open
 
-## Open one file and follow the prompts
+| Computer | Download | Open after extracting the **entire ZIP** |
+|---|---|---|
+| **Windows 10/11 x64** | **[Windows kit 0.5.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.5.0/Nextbase622GW-Windows-0.5.0.zip)** | **`Nextbase622GW-Repair.exe`**; accept the administrator prompt |
+| **Mac** | **[Mac/source kit 0.5.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.5.0/Nextbase622GW-recovery-0.5.0.zip)** | **`Repair Bluetooth.command`**; requires Python 3.9+ |
 
-Verify the download and extract the entire ZIP, then open the file for your computer:
+**Windows includes Python.** Keep the EXE and its `_internal` folder together; no installer or Python setup is needed. Verify your download using the **[checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.5.0/SHA256SUMS.txt)**. The EXE is unsigned. [Verification and help](docs/guided-repair.md).
 
-| Computer | Launcher |
-|---|---|
-| **Windows 10/11** | Right-click **`Repair Bluetooth.cmd` → Run as administrator** |
-| **Mac** | Open **`Repair Bluetooth.command`** |
-
-You need **Python 3.9+**, a microSD reader, a USB data cable connected to the camera's **body** port, and steady power. Both launchers use the same checks and format confirmation. [Preparation and help](docs/guided-repair.md).
+You need a microSD reader, a USB data cable connected to the camera's **body** port, and steady power. Both platforms use the same checks and format confirmation.
 
 The launcher guides you through:
 

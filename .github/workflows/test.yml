@@ -43,3 +43,22 @@ jobs:
           }
       - run: python tools/build_release.py --check
       - run: python tools/build_release.py
+      - name: Build portable Windows EXE
+        run: |
+          python -m pip install --require-hashes -r tools/windows-build-requirements.txt
+          python tools/build_windows.py
+      - name: Test extracted EXE without installed Python on PATH
+        shell: powershell
+        run: |
+          Expand-Archive -LiteralPath dist/Nextbase622GW-Windows-0.5.0.zip -DestinationPath dist/frozen-smoke
+          $env:NB_REPAIR_EXE = (Resolve-Path dist/frozen-smoke/Nextbase622GW-recovery-0.5.0/Nextbase622GW-Repair.exe).Path
+          python -m unittest discover -s tests -p test_windows_bundle.py -v
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      # github.com/actions/upload-artifact/releases/tag/v7.0.2
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: windows-portable
+          path: |
+            dist/Nextbase622GW-Windows-0.5.0.zip
+            dist/windows-build.json
+          if-no-files-found: error
