@@ -54,7 +54,7 @@ class PersistentResultTests(unittest.TestCase):
 
     def preflight(self):
         fields = dict(model="622GW", firmware="R13.3", machine="armv7l", kernel="4.9.76",
-                      **VENDOR, identity_sha256=sha(self.identity), script_sha256=sha(self.script),
+                      **VENDOR, identity_sha256=getattr(self, "identity_hash", sha(self.identity)), script_sha256=sha(self.script),
                       hook_sha256=sha(self.hook), fl_mount="ambafs_a", failure="BT_DEFAULT_CONFIG_CREATE_FAILED")
         self.write("RESULT.txt", "PREFLIGHT_VERIFIED\n" + "".join(k + "=" + v + "\n" for k, v in fields.items()))
         self.write("failure-console.bin", b"bt_config.xml\nUnable to Create default configuration\n")

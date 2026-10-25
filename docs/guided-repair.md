@@ -79,4 +79,6 @@ Each attempt stores a private UUID session under **`~/Nextbase622GW Repairs/`**,
 
 These captures can contain camera/phone identifiers, configuration and pairing keys. Keep them out of public commits and issues. For support, share only sanitized model, firmware, tool version, error and session phase. The launcher never copies video recordings.
 
+The session binds the model/firmware and unique camera/card serial fields. Changing battery, used-space, clock or Bluetooth-status fields in `Nextbase.info` do not invalidate that identity; missing or duplicated serial fields do.
+
 [Research, compatibility hashes and evidence limits](technical-notes.md) · [Full manual procedure](internal-storage-repair.md) · [Agent instructions](../CLAUDE.md)

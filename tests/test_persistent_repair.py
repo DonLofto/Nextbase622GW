@@ -20,6 +20,8 @@ if os.name == "posix":
 
 
 ROOT = Path(__file__).resolve().parents[1]
+IDENTITY = b"Model: 622GW\r\nFirmware: R13.3\r\nSerial No: SYNTHETIC-CAMERA\r\nSD Card Serial No: A1B2C3D4\r\n"
+IDENTITY_HASH = hashlib.sha256(b"model=622GW\nfirmware=R13.3\nserial_no=SYNTHETIC-CAMERA\nsd_serial_no=A1B2C3D4\n").hexdigest()
 
 
 def load_wizard():
@@ -59,6 +61,7 @@ class SyntheticHost:
         factory.hook = (self.card / "autoexec.ash").read_bytes()
         factory.script = (self.card / "nb-a-preflight.sh").read_bytes() if phase == "backup" else b"unused"
         factory.identity = (self.card / "Nextbase.info").read_bytes()
+        factory.identity_hash = IDENTITY_HASH
         if phase == "backup":
             factory.folder = self.card / "nb-a-preflight"; factory.folder.mkdir()
             factory.preflight()
@@ -87,6 +90,8 @@ class SyntheticHost:
             data = b"Persistence observer ended; inspect SD results.\n"
         else:
             raise AssertionError("unexpected boot")
+        with (self.card / "Nextbase.info").open("ab") as stream:
+            stream.write(("Battery Status: synthetic-" + phase + "\nSD Card Used Space: changed\n").encode("ascii"))
         if self.mutate:
             replacement = self.mutate(self, phase)
             if replacement is not None:
@@ -104,7 +109,7 @@ class PersistentHostTests(unittest.TestCase):
         self.base = Path(self.temporary.name).resolve()
         self.card = self.base / "card with spaces"
         self.card.mkdir()
-        (self.card / "Nextbase.info").write_bytes(b"Model: 622GW\r\nFirmware: R13.3\r\n")
+        (self.card / "Nextbase.info").write_bytes(IDENTITY)
         (self.card / "video.mp4").write_bytes(b"do not copy or erase")
         self.identity = self.w.verify_identity(self.card)
         self.assets = {"nb-a-preflight.sh": self.base / "script.sh", "autoexec.ash": self.base / "hook.ash"}
@@ -130,9 +135,22 @@ class PersistentHostTests(unittest.TestCase):
             self.w.verify_identity(self.card)
 
     def test_changed_card_identity_cannot_be_adopted(self):
-        (self.card / "Nextbase.info").write_bytes(b"Model: 622GW\nFirmware: R13.3\nSerial: another\n")
+        (self.card / "Nextbase.info").write_bytes(IDENTITY.replace(b"SYNTHETIC-CAMERA", b"OTHER-CAMERA"))
         with self.assertRaises(self.w.RepairError):
             self.w.verify_identity(self.card, self.identity)
+
+    def test_identity_binding_ignores_status_changes_but_requires_stable_serials(self):
+        info = self.card / "Nextbase.info"
+        original = info.read_bytes()
+        info.write_bytes(original + b"Battery Status: 10%\nSD Card Used Space: 24MB\nBluetooth MAC Address: 00:00:00:00:00:00\nTime & date: before\n")
+        first = self.w.verify_identity(self.card)
+        info.write_bytes(original + b"Battery Status: 100%\nSD Card Used Space: 56MB\nBluetooth MAC Address: AA:BB:CC:DD:EE:FF\nTime & date: later\n")
+        self.assertEqual(self.w.verify_identity(self.card, first), first)
+        for bad in (original.replace(b"A1B2C3D4", b"00000000"),
+                    original.replace(b"SD Card Serial No: A1B2C3D4\r\n", b""),
+                    original + b"Serial No: ANOTHER\n"):
+            info.write_bytes(bad)
+            with self.assertRaises(self.w.RepairError): self.w.verify_identity(self.card)
 
     def test_new_session_refuses_existing_claim_hook_or_firmware(self):
         for name in ("NBFA02.claimed", "NBFA01.claimed", "autoexec.ash", "usb.multi.console", "FW622GWA.bin", "bt-nand-backup.claimed"):
@@ -370,12 +388,12 @@ class PersistentHostTests(unittest.TestCase):
                 if approval == "NO":
                     shutil.rmtree(self.card)
                     self.card.mkdir()
-                    (self.card / "Nextbase.info").write_bytes(b"Model: 622GW\r\nFirmware: R13.3\r\n")
+                    (self.card / "Nextbase.info").write_bytes(IDENTITY)
 
     def test_bad_backup_wrong_returned_card_and_new_hook_stop_before_approval(self):
         mutations = {
             "backup": lambda host: (host.card / "bt-nand-backup-1/helper-read-status.txt").write_bytes(b"TIMEOUT\n"),
-            "card": lambda host: (host.card / "Nextbase.info").write_bytes(b"Model: 622GW\nFirmware: R13.3\nSerial: changed\n"),
+            "card": lambda host: (host.card / "Nextbase.info").write_bytes(IDENTITY.replace(b"A1B2C3D4", b"FEDCBA98")),
             "hook": lambda host: (host.card / "autoexec.other.ash").write_bytes(b"unowned\n"),
         }
         for label, action in mutations.items():
@@ -388,7 +406,7 @@ class PersistentHostTests(unittest.TestCase):
                 self.assertNotIn("format", host.boots)
                 self.assertFalse(wizard.journal.data["format_consent_consumed"])
                 shutil.rmtree(self.card); self.card.mkdir()
-                (self.card / "Nextbase.info").write_bytes(b"Model: 622GW\r\nFirmware: R13.3\r\n")
+                (self.card / "Nextbase.info").write_bytes(IDENTITY)
 
     def test_missing_format_result_consumes_approval_and_relaunch_never_reboots_it(self):
         def mutate(host, phase):

@@ -40,11 +40,17 @@ for path in "$sd/Nextbase.info" "$script" "$hook" "$backup" "$sd/usb.console" "$
     regular "$path" || refuse 'a required staged or vendor file is absent or linked'
 done
 [ "$(wc -c < "$sd/Nextbase.info")" -le 1048576 ] || refuse 'camera identity is unexpectedly large'
-awk '
+identity_material=$(awk '
     tolower($0) ~ /^[[:space:]]*model[[:space:]]*:/ { m++; value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*$/, "", value); model=value }
     tolower($0) ~ /^[[:space:]]*firmware[[:space:]]*:/ { f++; value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*$/, "", value); firmware=value }
-    END { exit !(m == 1 && f == 1 && model == "622GW" && firmware == "R13.3") }
-' "$sd/Nextbase.info" || refuse 'unsupported or ambiguous model/firmware'
+    tolower($0) ~ /^[[:space:]]*serial no[[:space:]]*:/ { s++; value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*$/, "", value); serial=value }
+    tolower($0) ~ /^[[:space:]]*sd card serial no[[:space:]]*:/ { d++; value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*$/, "", value); card=value }
+    function valid(value) { return length(value) <= 64 && value ~ /^[[:alnum:]_.-]+$/ && value !~ /^(0[xX])?0+$/ && tolower(value) != "unknown" && tolower(value) != "none" && tolower(value) != "na" }
+    END {
+        if (!(m == 1 && f == 1 && model == "622GW" && firmware == "R13.3" && s == 1 && d == 1 && valid(serial) && valid(card))) exit 1;
+        printf "model=622GW\nfirmware=R13.3\nserial_no=%s\nsd_serial_no=%s\n", serial, card
+    }
+' "$sd/Nextbase.info") || refuse 'unsupported, missing or ambiguous camera/card identity'
 for path in "$sd"/*; do
     lower=$(printf '%s' "${path##*/}" | tr 'A-Z' 'a-z')
     case "$lower" in fw*.bin|ld*.bin) refuse 'firmware update files are present' ;; esac
@@ -81,7 +87,10 @@ for candidate in /dev/vcs /dev/vcs1; do
     esac
 done
 [ -n "$console_device" ] || refuse 'known default-configuration creation failure was not observed'
-identity_hash=$(file_hash "$sd/Nextbase.info") || refuse 'cannot hash camera identity'
+identity_hash=$(printf '%s\n' "$identity_material" | sha256sum) || refuse 'cannot hash camera identity'
+identity_hash=${identity_hash%% *}
+[ "${#identity_hash}" -eq 64 ] || refuse 'invalid camera identity digest'
+case "$identity_hash" in *[!0-9a-f]*) refuse 'invalid camera identity digest' ;; esac
 script_hash=$(file_hash "$script") || refuse 'cannot hash preflight source'
 hook_hash=$(file_hash "$hook") || refuse 'cannot hash startup hook'
 

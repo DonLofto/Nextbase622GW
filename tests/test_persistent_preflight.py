@@ -47,7 +47,7 @@ class Device:
         (self.root / "tmp/amazon").symlink_to(self.vendor[0])
         (self.sd / "Nextbase.info").write_bytes(
             b"NBDVR622GWA-R13.3\r\nModel: 622GW\r\nFirmware: R13.3\r\n"
-            b"Serial No: PRIVATE-SENTINEL\r\n")
+            b"Serial No: PRIVATE-SENTINEL\r\nSD Card Serial No: A1B2C3D4\r\n")
         (self.sd / "usb.console").write_bytes(TOKEN)
         (self.sd / "autoexec.ash").write_bytes(HOOK)
         (self.fl / "keep.xml").write_bytes(b"unchanged internal data\n")
@@ -84,6 +84,7 @@ class Device:
 import hashlib, os, pathlib, sys
 r=pathlib.Path(os.environ['HARNESS']); command=pathlib.Path(sys.argv[0]).name; args=sys.argv[1:]
 if command == 'sha256sum':
+    if not args: print(hashlib.sha256(sys.stdin.buffer.read()).hexdigest()+'  -')
     for name in args:
         try:
             if (r/'fail-report-hash').exists() and pathlib.Path(name).name == 'RESULT.txt': sys.exit(1)
@@ -132,6 +133,18 @@ class PersistentPreflightTests(unittest.TestCase):
     def device(self):
         return Device(self)
 
+    def test_identity_fingerprint_does_not_include_changing_status_fields(self):
+        hashes = []
+        for status in (b"Battery Status: 10%\nSD Card Used Space: 24MB\n", b"Battery Status: 100%\nSD Card Used Space: 56MB\n"):
+            d = self.device()
+            with (d.sd / "Nextbase.info").open("ab") as stream:
+                stream.write(status)
+            result = d.run()
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            fields = dict(line.split("=", 1) for line in (d.sd / "nb-a-preflight/RESULT.txt").read_text().splitlines()[1:])
+            hashes.append(fields["identity_sha256"])
+        self.assertEqual(hashes[0], hashes[1])
+
     def refuses_unchanged(self, device):
         before = device.snapshot()
         result = device.run()
@@ -164,7 +177,7 @@ class PersistentPreflightTests(unittest.TestCase):
         self.assertEqual(fields, {
             "model": "622GW", "firmware": "R13.3", "machine": "armv7l", "kernel": "4.9.76",
             "amazon_sha256": digest(d.vendor[0]), "bsa_sha256": digest(d.vendor[1]),
-            "hcd_sha256": digest(d.vendor[2]), "identity_sha256": digest(d.sd / "Nextbase.info"),
+            "hcd_sha256": digest(d.vendor[2]), "identity_sha256": hashlib.sha256(b"model=622GW\nfirmware=R13.3\nserial_no=PRIVATE-SENTINEL\nsd_serial_no=A1B2C3D4\n").hexdigest(),
             "script_sha256": digest(d.sd / "nb-a-preflight.sh"),
             "hook_sha256": digest(d.sd / "autoexec.ash"), "fl_mount": "ambafs_a",
             "failure": "BT_DEFAULT_CONFIG_CREATE_FAILED",
@@ -179,13 +192,16 @@ class PersistentPreflightTests(unittest.TestCase):
         self.assertEqual((d.fl / "keep.xml").read_bytes(), internal)
 
     def test_wrong_identity_runtime_or_vendor_refuses_before_sd_output(self):
-        for mode in ("model", "firmware", "duplicate", "not-root", "wrong-machine", "wrong-kernel", "amazon", "bsa", "hcd"):
+        for mode in ("model", "firmware", "duplicate", "duplicate-serial", "missing-card-serial", "zero-serial", "not-root", "wrong-machine", "wrong-kernel", "amazon", "bsa", "hcd"):
             with self.subTest(mode=mode):
                 d = self.device()
                 info = d.sd / "Nextbase.info"
                 if mode == "model": info.write_bytes(b"Model: 522GW\nFirmware: R13.3\n")
                 elif mode == "firmware": info.write_bytes(b"Model: 622GW\nFirmware: R12.0\n")
                 elif mode == "duplicate": info.write_bytes(info.read_bytes() + b"MODEL: 622GW\n")
+                elif mode == "duplicate-serial": info.write_bytes(info.read_bytes() + b"Serial No: OTHER\n")
+                elif mode == "missing-card-serial": info.write_bytes(info.read_bytes().replace(b"SD Card Serial No: A1B2C3D4\r\n", b""))
+                elif mode == "zero-serial": info.write_bytes(info.read_bytes().replace(b"A1B2C3D4", b"00000000"))
                 elif mode in ("amazon", "bsa", "hcd"): d.vendor[("amazon", "bsa", "hcd").index(mode)].write_bytes(b"changed build")
                 else: (d.root / mode).touch()
                 self.refuses_unchanged(d)

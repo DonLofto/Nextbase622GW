@@ -59,14 +59,24 @@ def verify_identity(card, expected=None):
     if [p.name for p in card.iterdir() if p.name.casefold() == "nextbase.info"] != ["Nextbase.info"]:
         raise RepairError("Require one regular Nextbase.info file with its original name.")
     data = read_regular(card / "Nextbase.info", limit=65536)
-    fields = {"model": [], "firmware": []}
+    fields = {"model": [], "firmware": [], "serial no": [], "sd card serial no": []}
     for line in data.decode("ascii", errors="replace").splitlines():
         key, sep, value = line.partition(":")
         if sep and key.strip().lower() in fields:
             fields[key.strip().lower()].append(value.strip())
-    if fields != {"model": ["622GW"], "firmware": ["R13.3"]}:
+    if fields["model"] != ["622GW"] or fields["firmware"] != ["R13.3"]:
         raise RepairError("Only one Model: 622GW and Firmware: R13.3 is supported.")
-    identity = hashlib.sha256(data).hexdigest()
+    identifiers = []
+    for name in ("serial no", "sd card serial no"):
+        values = fields[name]
+        if (len(values) != 1 or re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", values[0]) is None
+                or values[0].lower() in ("unknown", "none", "na")
+                or re.fullmatch(r"(?:0[xX])?0+", values[0])):
+            raise RepairError("Unique nonzero camera and SD-card serial fields are required.")
+        identifiers.append(values[0])
+    # Nextbase.info also contains changing battery, space, time and Bluetooth fields.
+    material = "model=622GW\nfirmware=R13.3\nserial_no=%s\nsd_serial_no=%s\n" % tuple(identifiers)
+    identity = hashlib.sha256(material.encode("ascii")).hexdigest()
     if expected is not None and identity != expected:
         raise RepairError("Camera/card identity changed; this session cannot adopt it.")
     return identity
