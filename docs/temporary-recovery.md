@@ -1,6 +1,6 @@
 # Temporary Bluetooth recovery guide
 
-Start with the [five-step quick start](../README.md#temporary-recovery-in-five-steps). This guide covers the **default temporary RAM recovery** in release **0.2.0**, not the separate [advanced internal Drive A repair](internal-storage-repair.md). Neither double-click launcher selects the advanced procedure.
+This guide covers the **temporary RAM recovery** in release **0.2.0**. For the persistent Drive A repair, start with the [main instructions](../README.md). Neither double-click launcher performs that repair.
 
 The supported case is a **Nextbase 622GW / R13.3** whose vendor Bluetooth application fails to create its default `/tmp/FL0/bt_config.xml`. A zero MAC or failed pairing alone is insufficient. The installer checks model/firmware; the camera script checks runtime identities, known binary hashes, the specific configuration failure and an existing BSA service. Other models, firmware and faults are outside the tested scope. Do not bypass a check or install firmware solely to try this kit.
 

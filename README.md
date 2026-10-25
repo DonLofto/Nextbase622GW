@@ -1,36 +1,29 @@
-# Nextbase 622GW Bluetooth recovery
+# Nextbase 622GW Bluetooth repair
 
-**[Download recovery kit 0.2.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.2.0/Nextbase622GW-recovery-0.2.0.zip)** · **[SHA256 checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.2.0/SHA256SUMS.txt)**
+**Problem:** Internal Drive A cannot save Bluetooth configuration, preventing phone pairing.
 
-For the **Nextbase 622GW / R13.3** fault where Bluetooth cannot create `/tmp/FL0/bt_config.xml`. The affected camera showed a zero Bluetooth MAC, a name ending in `000`, and failed phone pairing. **A zero MAC alone does not establish this fault.** Other models, firmware and Bluetooth faults are outside the tested scope; the temporary kit checks compatibility before acting.
+**Fix:** Use the camera's own command to format Drive A and let stock Bluetooth recreate its configuration.
 
-## Choose a recovery
+**Warning:** This erases internal Drive A files/settings. Verified on **one 622GW running R13.3**, with pairing retained across two full power-offs. A zero Bluetooth MAC alone does not establish this fault.
 
-| Route | What it does |
-|---|---|
-| **Temporary recovery — start here** | The Mac/Windows launcher uses RAM for configuration. It is lost at reboot; re-arm for another session. No internal format. |
-| [Advanced internal-storage repair](docs/internal-storage-repair.md) | A separate manual procedure that **erases internal Drive A files/settings**. Requires verified captures/backups, healthy SD storage, passive console evidence, a harmless two-boot rehearsal and explicit approval for one format attempt. |
+**[Download kit 0.2.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.2.0/Nextbase622GW-recovery-0.2.0.zip)** · **[Checksum](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.2.0/SHA256SUMS.txt)**
 
-The original RAM operation restored app access on one camera. **The guarded temporary package has not been boot-tested end to end on a camera.** The advanced repair retained pairing across two post-pairing cold boots on that unit, including an ordinary boot after all hooks were removed. The original cause, long-term NAND health and a working NAND restore method remain unproven. [Evidence and limits](docs/technical-notes.md#validation).
+## Repair in five steps
 
-## Temporary recovery in five steps
+Read the **[complete repair guide](docs/internal-storage-repair.md)** before copying anything to the card. It contains the compatibility checks, backups, console capture and harmless rehearsal required before formatting.
 
-You need a Mac or Windows PC, the camera's microSD card, preferably a reader, and steady power. Save any recordings you need.
+1. **Prepare.** Download and extract the kit, then complete the guide's preparation and checks.
+2. **Run once.** Follow the supplied one-shot format procedure. Require `Drive 'A' format done.`; stop if it fails or the result is missing. Never re-arm the format claim.
+3. **Pair.** Boot, stop recording, open **Connected App → Setup phone**, and connect in the Nextbase app. Confirm the camera or recordings are visible.
+4. **Verify after reboot.** Fully power off, restart, and reconnect without pairing again, following the guide's persistence check.
+5. **Clean up.** Remove the diagnostic hooks and console triggers, retain the consumed format claim, then verify another ordinary cold boot reconnects.
 
-1. **Download the ZIP above, verify its checksum, and extract it completely** onto your computer. Keep the folders together; do not run files inside the ZIP. [Checksum instructions](docs/temporary-recovery.md#verify-the-download).
-2. **Stop recording and power the camera off.** Put its card in a reader. Alternatively, use a data cable at the camera body's mini-USB port and choose **Firmware Update** for writable card access. The mount's USB port supplies power only. Do not add firmware files.
-3. Open **`recovery-kit/Recover Bluetooth.command`** on macOS or **`recovery-kit/Recover Bluetooth.cmd`** on Windows. Follow the tool's messages. It verifies and copies the files; stop if it refuses compatibility or existing files.
-4. **Safely eject.** Return the card to the powered-off camera, or power off/unplug the camera if using USB storage. Reconnect its **body USB data port** to the computer, turn it on, and **wait one minute**. The diagnostic trigger may skip the PC menu.
-5. **Stop recording → cog → Connected App → Setup phone → OK.** Pair in the Nextbase app and confirm it shows the camera or recordings. Leave the camera powered for this session.
+## Temporary access
 
-`ATTEMPT_COMPLETE` means the script finished its attempt; actual app access proves success. Reboot discards the RAM configuration and can lose pairing.
+The Mac/Windows double-click launchers provide a **temporary RAM workaround**, lost at reboot. They do not perform the repair above. [Temporary recovery instructions](docs/temporary-recovery.md).
 
-## Help and details
+## Details
 
-- [Temporary recovery guide](docs/temporary-recovery.md): cleanup, re-arming, troubleshooting and developer checks.
-- [Technical notes](docs/technical-notes.md): diagnosis, operation and compatibility hashes.
-- [CLAUDE.md](CLAUDE.md): agent execution instructions; the supported procedure is already researched.
+[Research and test limits](docs/technical-notes.md) · [Agent instructions — CLAUDE.md](CLAUDE.md) · [MIT license](LICENSE)
 
-Keep logs, XML, pairing keys and result folders private. For public support, provide model, firmware, host OS, tool error and sanitized status only.
-
-Independent community tooling under the [MIT license](LICENSE). No vendor firmware, vendor executables or populated pairing configuration is distributed.
+Keep captures, configuration and pairing keys private. Long-term flash health and a working NAND restore method remain unproven.
