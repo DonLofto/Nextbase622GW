@@ -562,7 +562,7 @@ class Wizard:
     def run(self):
         self.say("Nextbase 622GW / R13.3 — guided internal Drive A repair (" + getattr(self.host, "label", "computer") + ")")
         self.say("Formatting erases A's settings/files. Proven on one camera; this new wizard is host-tested only.")
-        self.say("You need a card reader, body USB data cable, steady power and Python 3.9+.")
+        self.say("You need a card reader, body USB data cable and steady power.")
         self.answer("With the camera off, connect its microSD through the reader. Press Return: ")
         card = self.card()
         if exists(card / MARKER):
@@ -666,6 +666,12 @@ def resource_root():
     return directory if getattr(sys, "frozen", False) else directory.parent
 
 
+def interactive_console():
+    # Windows isatty() also accepts NUL; require a real console input handle.
+    return (sys.stdin is not None and sys.stdin.isatty()
+            and (not is_windows() or windows_host.native().interactive_console()))
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--volume", type=Path, help="explicit mounted SD root if automatic selection is ambiguous")
@@ -683,7 +689,7 @@ def main(argv=None):
             return 1
     if sys.platform not in ("darwin", "win32"):
         parser.error("The guided launcher supports macOS and Windows; use the manual path elsewhere.")
-    if sys.version_info < (3, 9) or not sys.stdin.isatty():
+    if sys.version_info < (3, 9) or not interactive_console():
         parser.error("Python 3.9+ and an interactive terminal are required; no noninteractive confirmation option exists.")
     wizard = None
     try:

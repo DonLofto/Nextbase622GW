@@ -14,6 +14,26 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 class BundleTests(unittest.TestCase):
+    def test_windows_null_input_is_refused_before_device_access(self):
+        repair = load_wizard()
+        api = mock.Mock()
+        api.interactive_console.return_value = False
+        with mock.patch.object(sys, "platform", "win32"), mock.patch.object(sys.stdin, "isatty", return_value=True), mock.patch.object(repair, "is_windows", return_value=True), mock.patch.object(repair.windows_host, "native", return_value=api), mock.patch.object(repair, "default_host", side_effect=AssertionError("device access")), mock.patch.object(sys, "stderr"):
+            with self.assertRaises(SystemExit) as stopped:
+                repair.main([])
+            self.assertEqual(stopped.exception.code, 2)
+
+    def test_native_console_query_refuses_nonconsole_handle(self):
+        repair = load_wizard()
+        kernel = mock.Mock()
+        kernel.GetStdHandle.return_value = 99
+        kernel.GetConsoleMode.return_value = 0
+        api = repair.windows_host.NativeWindows(kernel=kernel)
+        self.assertFalse(api.interactive_console())
+        kernel.GetStdHandle.assert_called_with(-10)
+        kernel.GetConsoleMode.return_value = 1
+        self.assertTrue(api.interactive_console())
+
     def test_build_stages_on_destination_drive(self):
         sys.path.insert(0, str(ROOT / "tools"))
         try:
@@ -51,7 +71,7 @@ class BundleTests(unittest.TestCase):
         entry = importlib.util.module_from_spec(spec)
         with mock.patch.dict(sys.modules, {"repair": repair}):
             spec.loader.exec_module(entry)
-        with mock.patch.object(entry, "main", return_value=1), mock.patch.object(sys.stdin, "isatty", return_value=True), mock.patch("builtins.input") as pause:
+        with mock.patch.object(entry, "main", return_value=1), mock.patch.object(entry, "interactive_console", return_value=True), mock.patch("builtins.input") as pause:
             self.assertEqual(entry.run(), 1)
             pause.assert_called_once()
 
@@ -102,6 +122,7 @@ class NativeBundleTests(unittest.TestCase):
     def test_console_and_administrator_manifest(self):
         import pefile
         pe = pefile.PE(str(self.exe))
+        self.addCleanup(pe.close)
         self.assertEqual(pe.OPTIONAL_HEADER.Subsystem, 3)  # Windows console
         self.assertEqual(pe.FILE_HEADER.Machine, 0x8664)  # x64
         resources = [entry for entry in pe.DIRECTORY_ENTRY_RESOURCE.entries if entry.id == 24]

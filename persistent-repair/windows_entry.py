@@ -1,11 +1,10 @@
 """Console entrypoint for the portable Windows executable."""
-import sys
-from repair import main
+from repair import interactive_console, main
 
 
 def run():
     result = main()
-    if sys.stdin is not None and sys.stdin.isatty():
+    if interactive_console():
         try:
             input("Press Return to close. ")
         except (EOFError, KeyboardInterrupt):

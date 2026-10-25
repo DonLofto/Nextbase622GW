@@ -67,6 +67,8 @@ class NativeWindows:
                 "MoveFileExW": (C.c_int, [C.c_wchar_p, C.c_wchar_p, DWORD]),
                 "GetLogicalDrives": (DWORD, []),
                 "SetThreadExecutionState": (DWORD, [DWORD]),
+                "GetStdHandle": (HANDLE, [DWORD]),
+                "GetConsoleMode": (C.c_int, [HANDLE, C.POINTER(DWORD)]),
             }
             for name, (result, arguments) in signatures.items():
                 function = getattr(kernel, name)
@@ -85,6 +87,10 @@ class NativeWindows:
         shell.IsUserAnAdmin.restype = C.c_int
         shell.IsUserAnAdmin.argtypes = []
         return bool(shell.IsUserAnAdmin())
+
+    def interactive_console(self):
+        mode = DWORD()
+        return bool(self.kernel.GetConsoleMode(self.kernel.GetStdHandle(-10), C.byref(mode)))
 
     def open(self, name, share=0):
         handle = self.kernel.CreateFileW(name, 0xC0000000, share, None, 3, 0, None)
