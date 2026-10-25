@@ -23,7 +23,7 @@ class BundleTests(unittest.TestCase):
         finally:
             sys.path.pop(0)
         with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
+            root = Path(directory).resolve()
             with mock.patch.object(builder, "__file__", str(root / "tools/build_windows.py")), mock.patch.object(sys, "platform", "win32"), mock.patch.object(sys, "version_info", (3, 12)), mock.patch.object(builder.tempfile, "TemporaryDirectory", side_effect=RuntimeError("stop before compilation")) as stage:
                 with self.assertRaisesRegex(RuntimeError, "stop before compilation"):
                     builder.main()
