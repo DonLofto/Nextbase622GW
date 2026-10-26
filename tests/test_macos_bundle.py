@@ -29,6 +29,20 @@ def load_entry():
 
 
 class MacEntryTests(unittest.TestCase):
+    @unittest.skipUnless(os.name == "posix", "runtime path alias fixture")
+    def test_kit_check_canonicalizes_module_directory_but_refuses_linked_helper(self):
+        repair = load_wizard()
+        with tempfile.TemporaryDirectory() as directory:
+            base = Path(directory).resolve()
+            alias = base / "module-alias"
+            alias.symlink_to(ROOT / "persistent-repair", target_is_directory=True)
+            with mock.patch.object(repair.windows_host, "__file__", str(alias / "windows_host.py")), mock.patch("builtins.print"):
+                self.assertEqual(repair.main(["--check-kit"]), 0)
+            helper = base / "windows-volume.ps1"
+            helper.symlink_to(ROOT / "persistent-repair/windows-volume.ps1")
+            with mock.patch.object(repair.windows_host, "__file__", str(base / "windows_host.py")), mock.patch("builtins.print"):
+                self.assertEqual(repair.main(["--check-kit"]), 1)
+
     def test_frozen_reader_command_does_not_treat_engine_as_python(self):
         repair = load_wizard()
         with mock.patch.object(sys, "frozen", True, create=True), mock.patch.object(sys, "executable", "/example/engine"):
@@ -121,7 +135,11 @@ class NativeMacAppTests(unittest.TestCase):
                 data = repair.MacHost(os.ttyname(slave)).capture(Path("no-python-source.py"), output, "format")
             self.assertEqual(data, b"NBFA02_BEGIN\nDrive 'A' format done.\n")
             self.assertFalse(select.select([master], [], [], 0.05)[0], "reader transmitted data")
-            self.assertEqual(termios.tcgetattr(slave), original)
+            restored = termios.tcgetattr(slave)
+            # Darwin adds PENDIN when restoring canonical input; it is kernel state.
+            restored[3] &= ~termios.PENDIN
+            original[3] &= ~termios.PENDIN
+            self.assertEqual(restored, original)
             self.assertEqual(failures, [])
         finally:
             producer.join(timeout=21)

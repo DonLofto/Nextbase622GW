@@ -686,7 +686,7 @@ def main(argv=None):
     if args.check_kit:
         try:
             verify_kit(resource_root())
-            read_regular(Path(windows_host.__file__).with_name("windows-volume.ps1"), limit=65536)
+            read_regular(Path(windows_host.__file__).resolve().with_name("windows-volume.ps1"), limit=65536)
             print("Repair kit files verified. No device was accessed.")
             return 0
         except (RepairError, OSError, ValueError) as error:
