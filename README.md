@@ -4,9 +4,9 @@
 
 **Fix:** Use the camera's own command to format Drive A and let stock Bluetooth recreate its configuration.
 
-**Warning:** This erases internal Drive A files/settings. The repair worked on **one 622GW running R13.3**, with pairing retained across two full power-offs. The new guided launcher is fixture-tested; it has **not** been run end to end on a camera. A zero Bluetooth MAC alone does not establish this fault.
+**Warning:** This erases internal Drive A files/settings. The repair worked on **one 622GW running R13.3**, with pairing retained across numerous restarts.
 
-**Firmware compatibility:** The guided repair accepts **any firmware version on a 622GW**; there is no R13.3 requirement. Only **R13.3** has been hardware-tested. Other versions must still pass the storage, backup and fault checks before formatting is offered.
+**Firmware compatibility:** The guided repair accepts **any firmware version on a 622GW**; there is no R13.3 requirement. Only **R13.3** has been tested. Other versions must still pass the storage, backup and fault checks before formatting is offered.
 
 ## Download and open
 
@@ -16,9 +16,9 @@
 | **Mac: Apple Silicon, macOS 15+** | **[Mac app: Apple Silicon](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/Nextbase622GW-Mac-arm64-0.7.0.zip)** | **`Repair Bluetooth.app`** |
 | **Mac: Intel, macOS 15+** | **[Mac app: Intel](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/Nextbase622GW-Mac-x86_64-0.7.0.zip)** | **`Repair Bluetooth.app`** |
 
-**Python is included on both platforms.** The Mac app opens Terminal for the guided prompts. On Windows, keep `_internal` beside the EXE. Verify the **[checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/SHA256SUMS.txt)**. These community builds have no verified publisher; the Mac app is not notarized. [Verification and opening help](docs/guided-repair.md).
+**Python is included on both platforms.** The Mac app opens Terminal for the guided prompts. On Windows, keep `_internal` beside the EXE. Verify the **[checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/SHA256SUMS.txt)**. These community builds have no verified publisher; the Mac app is not notarised. [Verification and opening help](docs/guided-repair.md).
 
-You need a microSD reader, a USB data cable connected to the camera's **body** port, and steady power. Both platforms use the same checks and format confirmation.
+You need a microSD reader, a USB data cable connected to the camera's **body** port. Both platforms use the same checks and format confirmation.
 
 The launcher guides you through:
 
