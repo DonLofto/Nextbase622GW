@@ -61,7 +61,9 @@ class SyntheticHost:
         factory.hook = (self.card / "autoexec.ash").read_bytes()
         factory.script = (self.card / "nb-a-preflight.sh").read_bytes() if phase == "backup" else b"unused"
         factory.identity = (self.card / "Nextbase.info").read_bytes()
-        factory.identity_hash = IDENTITY_HASH
+        module = load_wizard()
+        factory.identity_hash = module.verify_identity(self.card)
+        factory.firmware = module.identity_fields(self.card)["firmware"]
         if phase == "backup":
             factory.folder = self.card / "nb-a-preflight"; factory.folder.mkdir()
             factory.preflight()
@@ -138,6 +140,27 @@ class PersistentHostTests(unittest.TestCase):
         (self.card / "Nextbase.info").write_bytes(IDENTITY.replace(b"SYNTHETIC-CAMERA", b"OTHER-CAMERA"))
         with self.assertRaises(self.w.RepairError):
             self.w.verify_identity(self.card, self.identity)
+
+    def test_any_firmware_version_is_accepted_and_bound_to_the_session(self):
+        fingerprints = set()
+        for firmware in ("R10.0", "R13.2", "R13.3", "R15.1-beta + test"):
+            with self.subTest(firmware=firmware):
+                (self.card / "Nextbase.info").write_bytes(IDENTITY.replace(b"R13.3", firmware.encode()))
+                fingerprint = self.w.verify_identity(self.card)
+                self.assertEqual(self.w.identity_fields(self.card)["firmware"], firmware)
+                expected = hashlib.sha256(("model=622GW\nfirmware=" + firmware + "\nserial_no=SYNTHETIC-CAMERA\nsd_serial_no=A1B2C3D4\n").encode()).hexdigest()
+                self.assertEqual(fingerprint, expected)
+                fingerprints.add(fingerprint)
+        self.assertEqual(len(fingerprints), 4)
+        with self.assertRaises(self.w.RepairError):
+            self.w.verify_identity(self.card, IDENTITY_HASH)
+
+    def test_missing_duplicate_or_malformed_firmware_is_refused(self):
+        for info in (IDENTITY.replace(b"Firmware: R13.3\r\n", b""), IDENTITY + b"Firmware: R12.0\n",
+                     IDENTITY.replace(b"R13.3", b""), IDENTITY.replace(b"R13.3", b"R\x1b13"),
+                     IDENTITY.replace(b"R13.3", b"R" * 65)):
+            (self.card / "Nextbase.info").write_bytes(info)
+            with self.assertRaises(self.w.RepairError): self.w.verify_identity(self.card)
 
     def test_identity_binding_ignores_status_changes_but_requires_stable_serials(self):
         info = self.card / "Nextbase.info"
@@ -359,6 +382,16 @@ class PersistentHostTests(unittest.TestCase):
         return wizard, host, prompts
 
     def test_complete_synthetic_workflow_verifies_results_and_cleans_controls(self):
+        self.complete_workflow("R13.3")
+
+    def test_complete_synthetic_workflow_on_older_firmware(self):
+        self.complete_workflow("R12.0")
+
+    def test_complete_synthetic_workflow_on_newer_custom_firmware(self):
+        self.complete_workflow("R15.1-beta + test")
+
+    def complete_workflow(self, firmware):
+        (self.card / "Nextbase.info").write_bytes(IDENTITY.replace(b"R13.3", firmware.encode()))
         wizard, host, prompts = self.wizard()
         wizard.run()
         self.assertEqual(host.boots, ["backup", "dryrun", "rehearsal_skip", "format", "stock", "observer"])

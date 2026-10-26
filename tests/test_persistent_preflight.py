@@ -10,12 +10,7 @@ import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
 PAYLOAD = ROOT / "persistent-repair/payload"
-VENDOR_HASHES = (
-    "ea1ad4c2969abffee176364eef67e5df24b37598de18862ab5866eb86b64b054",
-    "3fab6b79dc0becd8b4dd5f9c710989463661d6905f2e2e265d5a5377dea20747",
-    "093bd3c261df7809ab30c77ca2d8d7870f5db66622d86d6125a17fd7295f6e55",
-)
-BACKUP_HASH = "32c4ccbdbb44d89cf5e6e122270c6c6d568c2efa623960c55a14006ccc53f365"
+BACKUP_HASH = "5492a73791eedf4ede299bf5c407cb5dd4beaf3b71c1b64edc585aab73e9072e"
 TOKEN = b"PortableMultimediaLtdt/aNextbase"
 SYMPTOM = (b"Error opening/creating /tmp/FL0/bt_config.xml file\n"
            b"[amazon][app_mgr_config] Unable to Create defaul\n"
@@ -44,6 +39,7 @@ class Device:
                        ("amazon_app", "bsa_server", "bt.hcd")]
         for index, path in enumerate(self.vendor):
             path.write_bytes(f"fixture vendor {index}\n".encode())
+            if index < 2: path.chmod(0o755)
         (self.root / "tmp/amazon").symlink_to(self.vendor[0])
         (self.sd / "Nextbase.info").write_bytes(
             b"NBDVR622GWA-R13.3\r\nModel: 622GW\r\nFirmware: R13.3\r\n"
@@ -71,8 +67,6 @@ class Device:
             text = text.replace(old, f"@@PATH{index}@@")
         for index, path in enumerate(paths.values()):
             text = text.replace(f"@@PATH{index}@@", str(path))
-        for expected, path in zip(VENDOR_HASHES, self.vendor):
-            text = text.replace(expected, digest(path))
         text = text.replace(BACKUP_HASH, digest(self.backup))
         text = text.replace("PATH=/bin:/sbin:/usr/bin:/usr/sbin",
                             f"PATH={self.root}/bin:/usr/bin:/bin:/usr/sbin:/sbin")
@@ -93,7 +87,7 @@ if command == 'sha256sum':
 elif command == 'id': print('501' if (r/'not-root').exists() else '0')
 elif command == 'uname':
     if args==['-m']: print('x86_64' if (r/'wrong-machine').exists() else 'armv7l')
-    else: print('6.0.0' if (r/'wrong-kernel').exists() else '4.9.76')
+    else: print((r/'kernel').read_text() if (r/'kernel').exists() else '4.9.76')
 elif command == 'sync':
     with (r/'actions').open('a') as f: f.write('sync\n')
 elif command == 'dd':
@@ -191,20 +185,57 @@ class PersistentPreflightTests(unittest.TestCase):
         self.assertEqual(set(names), {"RESULT.txt", "failure-console.bin", "mounts.txt"})
         self.assertEqual((d.fl / "keep.xml").read_bytes(), internal)
 
-    def test_wrong_identity_runtime_or_vendor_refuses_before_sd_output(self):
-        for mode in ("model", "firmware", "duplicate", "duplicate-serial", "missing-card-serial", "zero-serial", "not-root", "wrong-machine", "wrong-kernel", "amazon", "bsa", "hcd"):
+    def test_wrong_identity_runtime_or_missing_vendor_refuses_before_sd_output(self):
+        for mode in ("model", "firmware", "duplicate", "duplicate-serial", "missing-card-serial", "zero-serial", "not-root", "wrong-machine", "bad-kernel", "amazon", "bsa", "hcd"):
             with self.subTest(mode=mode):
                 d = self.device()
                 info = d.sd / "Nextbase.info"
                 if mode == "model": info.write_bytes(b"Model: 522GW\nFirmware: R13.3\n")
-                elif mode == "firmware": info.write_bytes(b"Model: 622GW\nFirmware: R12.0\n")
+                elif mode == "firmware": info.write_bytes(info.read_bytes().replace(b"R13.3", b""))
                 elif mode == "duplicate": info.write_bytes(info.read_bytes() + b"MODEL: 622GW\n")
                 elif mode == "duplicate-serial": info.write_bytes(info.read_bytes() + b"Serial No: OTHER\n")
                 elif mode == "missing-card-serial": info.write_bytes(info.read_bytes().replace(b"SD Card Serial No: A1B2C3D4\r\n", b""))
                 elif mode == "zero-serial": info.write_bytes(info.read_bytes().replace(b"A1B2C3D4", b"00000000"))
-                elif mode in ("amazon", "bsa", "hcd"): d.vendor[("amazon", "bsa", "hcd").index(mode)].write_bytes(b"changed build")
+                elif mode == "bad-kernel": (d.root / "kernel").write_text("bad kernel")
+                elif mode in ("amazon", "bsa", "hcd"): d.vendor[("amazon", "bsa", "hcd").index(mode)].unlink()
                 else: (d.root / mode).touch()
                 self.refuses_unchanged(d)
+
+    def test_any_firmware_and_changed_vendor_build_are_recorded_without_version_gate(self):
+        for firmware in ("R10.0", "R13.2", "R15.1-beta + test"):
+            with self.subTest(firmware=firmware):
+                d = self.device(); info = d.sd / "Nextbase.info"
+                info.write_bytes(info.read_bytes().replace(b"R13.3", firmware.encode()))
+                (d.root / "kernel").write_text("6.6.0-custom")
+                for index, path in enumerate(d.vendor): path.write_bytes((firmware + str(index)).encode())
+                result = d.run(); self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+                fields = dict(line.split("=", 1) for line in (d.sd / "nb-a-preflight/RESULT.txt").read_text().splitlines()[1:])
+                self.assertEqual(fields["firmware"], firmware)
+                self.assertEqual(fields["kernel"], "6.6.0-custom")
+                for name, path in zip(("amazon_sha256", "bsa_sha256", "hcd_sha256"), d.vendor): self.assertEqual(fields[name], digest(path))
+                material = f"model=622GW\nfirmware={firmware}\nserial_no=PRIVATE-SENTINEL\nsd_serial_no=A1B2C3D4\n"
+                self.assertEqual(fields["identity_sha256"], hashlib.sha256(material.encode()).hexdigest())
+                self.assertEqual(d.actions.read_text().splitlines(), ["sync", "backup"])
+
+    def test_backup_wrapper_accepts_any_firmware_before_checking_actual_storage(self):
+        for firmware in ("R10.0", "R15.1-beta + test"):
+            d = self.device(); info = d.sd / "Nextbase.info"
+            info.write_bytes(info.read_bytes().replace(b"R13.3", firmware.encode()))
+            (d.root / "kernel").write_text("6.6.0-custom")
+            text = (ROOT / "advanced/internal-drive-a/bt-nand-backup.sh").read_text()
+            for key, value in (("sd=/tmp/SD0", "sd=" + str(d.sd)), ("proc=/proc", "proc=" + str(d.root / "proc")),
+                               ("sys=/sys", "sys=" + str(d.root / "sys")), ("tmp=/tmp", "tmp=" + str(d.root / "tmp"))):
+                text = text.replace(key, value)
+            text = text.replace("PATH=/bin:/sbin:/usr/bin:/usr/sbin", f"PATH={d.root}/bin:/usr/bin:/bin:/usr/sbin:/sbin")
+            d.backup.write_text(text)
+            helper = d.sd / "nb-mtd-readonly"; helper.write_bytes(b"fixture helper")
+            (d.sd / "nb-mtd-readonly.sha256").write_text(digest(helper) + "  nb-mtd-readonly\n")
+            before = d.snapshot()
+            result = subprocess.run(["/bin/sh", str(d.backup)], env={**os.environ, "HARNESS": str(d.root)}, capture_output=True)
+            self.assertEqual(result.returncode, 20)
+            self.assertIn(b"proc MTD identity/geometry", result.stdout)
+            self.assertEqual(d.snapshot(), before)
+            self.assertFalse((d.sd / "bt-nand-backup.claimed").exists())
 
     def test_missing_out_of_range_or_failed_console_proof_is_refused(self):
         for mode in ("missing", "empty", "beyond-bound", "failed-read"):

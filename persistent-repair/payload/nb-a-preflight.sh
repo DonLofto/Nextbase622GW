@@ -4,6 +4,8 @@
 printf 'Drive A preflight entered.\n'
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
+LC_ALL=C
+export LC_ALL
 umask 077
 sd=/tmp/SD0
 fl=/tmp/FL0
@@ -35,7 +37,10 @@ done
 [ -d "$sd" ] && [ ! -L "$sd" ] || refuse 'invalid SD directory'
 [ -d "$fl" ] && [ ! -L "$fl" ] || refuse 'invalid internal storage path'
 [ "$(id -u)" = 0 ] || refuse 'root is required'
-[ "$(uname -m)" = armv7l ] && [ "$(uname -r)" = 4.9.76 ] || refuse 'unsupported Linux runtime'
+[ "$(uname -m)" = armv7l ] || refuse 'unsupported CPU architecture'
+kernel=$(uname -r) || refuse 'cannot read Linux release'
+[ -n "$kernel" ] && [ "${#kernel}" -le 128 ] || refuse 'invalid Linux release'
+case "$kernel" in *[!A-Za-z0-9._+-]*) refuse 'invalid Linux release' ;; esac
 for path in "$sd/Nextbase.info" "$script" "$hook" "$backup" "$sd/usb.console" "$amazon" "$bsa" "$hcd"; do
     regular "$path" || refuse 'a required staged or vendor file is absent or linked'
 done
@@ -47,22 +52,21 @@ identity_material=$(awk '
     tolower($0) ~ /^[[:space:]]*sd card serial no[[:space:]]*:/ { d++; value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*$/, "", value); card=value }
     function valid(value) { return length(value) <= 64 && value ~ /^[[:alnum:]_.-]+$/ && value !~ /^(0[xX])?0+$/ && tolower(value) != "unknown" && tolower(value) != "none" && tolower(value) != "na" }
     END {
-        if (!(m == 1 && f == 1 && model == "622GW" && firmware == "R13.3" && s == 1 && d == 1 && valid(serial) && valid(card))) exit 1;
-        printf "model=622GW\nfirmware=R13.3\nserial_no=%s\nsd_serial_no=%s\n", serial, card
+        if (!(m == 1 && f == 1 && model == "622GW" && length(firmware) <= 64 && firmware ~ /^[[:print:]]+$/ && s == 1 && d == 1 && valid(serial) && valid(card))) exit 1;
+        printf "model=622GW\nfirmware=%s\nserial_no=%s\nsd_serial_no=%s\n", firmware, serial, card
     }
 ' "$sd/Nextbase.info") || refuse 'unsupported, missing or ambiguous camera/card identity'
+firmware=$(printf '%s\n' "$identity_material" | awk -F= '$1 == "firmware" { print substr($0, 10) }')
 for path in "$sd"/*; do
     lower=$(printf '%s' "${path##*/}" | tr 'A-Z' 'a-z')
     case "$lower" in fw*.bin|ld*.bin) refuse 'firmware update files are present' ;; esac
 done
 [ "$(file_hash "$sd/usb.console")" = 2b19515c1ee1515adc54d58c62cac67679ad3493185cddfe92e5872a5a8527f3 ] || refuse 'unknown USB token'
-[ "$(file_hash "$backup")" = 32c4ccbdbb44d89cf5e6e122270c6c6d568c2efa623960c55a14006ccc53f365 ] || refuse 'backup wrapper differs from the frozen asset'
+[ "$(file_hash "$backup")" = 5492a73791eedf4ede299bf5c407cb5dd4beaf3b71c1b64edc585aab73e9072e ] || refuse 'backup wrapper differs from the frozen asset'
 amazon_hash=$(file_hash "$amazon") || refuse 'cannot hash Amazon binary'
 bsa_hash=$(file_hash "$bsa") || refuse 'cannot hash BSA binary'
 hcd_hash=$(file_hash "$hcd") || refuse 'cannot hash controller firmware'
-[ "$amazon_hash" = ea1ad4c2969abffee176364eef67e5df24b37598de18862ab5866eb86b64b054 ] || refuse 'unsupported Amazon binary'
-[ "$bsa_hash" = 3fab6b79dc0becd8b4dd5f9c710989463661d6905f2e2e265d5a5377dea20747 ] || refuse 'unsupported BSA binary'
-[ "$hcd_hash" = 093bd3c261df7809ab30c77ca2d8d7870f5db66622d86d6125a17fd7295f6e55 ] || refuse 'unsupported controller firmware'
+[ -s "$amazon" ] && [ -x "$amazon" ] && [ -s "$bsa" ] && [ -x "$bsa" ] && [ -s "$hcd" ] || refuse 'vendor files are empty or not executable'
 [ "$(readlink /tmp/amazon)" = "$amazon" ] || refuse 'unexpected Amazon launch path'
 for name in bt_config.xml bt_devices.xml si_devices.xml; do
     [ ! -L "$fl/$name" ] || refuse 'a configuration path is linked'
@@ -106,7 +110,7 @@ case "$proof" in
 esac
 printf '%s\n' "$mounts" > "$out/mounts.txt" || incomplete 'cannot preserve mounts'
 {
-    printf 'PREFLIGHT_VERIFIED\nmodel=622GW\nfirmware=R13.3\nmachine=armv7l\nkernel=4.9.76\n'
+    printf 'PREFLIGHT_VERIFIED\nmodel=622GW\nfirmware=%s\nmachine=armv7l\nkernel=%s\n' "$firmware" "$kernel"
     printf 'amazon_sha256=%s\nbsa_sha256=%s\nhcd_sha256=%s\n' "$amazon_hash" "$bsa_hash" "$hcd_hash"
     printf 'identity_sha256=%s\nscript_sha256=%s\nhook_sha256=%s\n' "$identity_hash" "$script_hash" "$hook_hash"
     printf 'fl_mount=ambafs_a\nfailure=BT_DEFAULT_CONFIG_CREATE_FAILED\n'
@@ -114,5 +118,5 @@ printf '%s\n' "$mounts" > "$out/mounts.txt" || incomplete 'cannot preserve mount
 (cd "$out" && sha256sum RESULT.txt failure-console.bin mounts.txt > SHA256SUMS) || incomplete 'cannot hash proof files'
 [ "$(wc -l < "$out/SHA256SUMS")" -eq 3 ] || incomplete 'incomplete proof manifest'
 sync || incomplete 'proof sync failed'
-[ "$(file_hash "$backup")" = 32c4ccbdbb44d89cf5e6e122270c6c6d568c2efa623960c55a14006ccc53f365 ] || incomplete 'backup wrapper changed before execution'
+[ "$(file_hash "$backup")" = 5492a73791eedf4ede299bf5c407cb5dd4beaf3b71c1b64edc585aab73e9072e ] || incomplete 'backup wrapper changed before execution'
 exec /bin/sh "$backup"

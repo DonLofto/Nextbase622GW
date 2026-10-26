@@ -6,17 +6,17 @@
 
 **Warning:** This erases internal Drive A files/settings. The repair worked on **one 622GW running R13.3**, with pairing retained across two full power-offs. The new guided launcher is fixture-tested; it has **not** been run end to end on a camera. A zero Bluetooth MAC alone does not establish this fault.
 
-**Earlier firmware:** The same repair may also work on earlier 622GW firmware with this internal Drive A fault, but those versions have not been tested. The guided launchers currently require **R13.3** and refuse other versions; do not bypass their compatibility checks.
+**Firmware compatibility:** The guided repair accepts **any firmware version on a 622GW**; there is no R13.3 requirement. Only **R13.3** has been hardware-tested. Other versions must still pass the storage, backup and fault checks before formatting is offered.
 
 ## Download and open
 
 | Computer | Download | Open after extracting the **entire ZIP** |
 |---|---|---|
-| **Windows 10/11 x64** | **[Windows kit 0.6.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-Windows-0.6.0.zip)** | **`Nextbase622GW-Repair.exe`**; accept the administrator prompt |
-| **Mac: Apple Silicon, macOS 15+** | **[Mac app: Apple Silicon](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-Mac-arm64-0.6.0.zip)** | **`Repair Bluetooth.app`** |
-| **Mac: Intel, macOS 15+** | **[Mac app: Intel](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-Mac-x86_64-0.6.0.zip)** | **`Repair Bluetooth.app`** |
+| **Windows 10/11 x64** | **[Windows kit 0.7.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/Nextbase622GW-Windows-0.7.0.zip)** | **`Nextbase622GW-Repair.exe`**; accept the administrator prompt |
+| **Mac: Apple Silicon, macOS 15+** | **[Mac app: Apple Silicon](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/Nextbase622GW-Mac-arm64-0.7.0.zip)** | **`Repair Bluetooth.app`** |
+| **Mac: Intel, macOS 15+** | **[Mac app: Intel](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/Nextbase622GW-Mac-x86_64-0.7.0.zip)** | **`Repair Bluetooth.app`** |
 
-**Python is included on both platforms.** The Mac app opens Terminal for the guided prompts. On Windows, keep `_internal` beside the EXE. Verify the **[checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/SHA256SUMS.txt)**. These community builds have no verified publisher; the Mac app is not notarized. [Verification and opening help](docs/guided-repair.md).
+**Python is included on both platforms.** The Mac app opens Terminal for the guided prompts. On Windows, keep `_internal` beside the EXE. Verify the **[checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/SHA256SUMS.txt)**. These community builds have no verified publisher; the Mac app is not notarized. [Verification and opening help](docs/guided-repair.md).
 
 You need a microSD reader, a USB data cable connected to the camera's **body** port, and steady power. Both platforms use the same checks and format confirmation.
 
@@ -32,7 +32,7 @@ If a check fails, stop. Relaunching offers inspection or removal of verified own
 
 ## Other paths and details
 
-- [Source kit](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-recovery-0.6.0.zip): legacy `.command`/`.cmd` launchers require Python 3.9+.
+- [Source kit](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.7.0/Nextbase622GW-recovery-0.7.0.zip): legacy `.command`/`.cmd` launchers require Python 3.9+.
 - [Temporary RAM recovery](docs/temporary-recovery.md): existing Mac/Windows launchers; lost at reboot.
 - [Manual repair procedure](docs/internal-storage-repair.md) · [Research and limits](docs/technical-notes.md) · [Agent instructions](CLAUDE.md) · [MIT license](LICENSE)
 

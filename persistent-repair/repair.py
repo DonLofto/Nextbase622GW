@@ -56,28 +56,34 @@ def write_new(path, data):
         raise RepairError("Copied file did not verify; do not boot the camera.")
 
 
-def verify_identity(card, expected=None):
+def identity_fields(card):
     card = plain_directory(card)
     if [p.name for p in card.iterdir() if p.name.casefold() == "nextbase.info"] != ["Nextbase.info"]:
         raise RepairError("Require one regular Nextbase.info file with its original name.")
     data = read_regular(card / "Nextbase.info", limit=65536)
     fields = {"model": [], "firmware": [], "serial no": [], "sd card serial no": []}
-    for line in data.decode("ascii", errors="replace").splitlines():
+    for line in data.decode("ascii", errors="replace").split("\n"):
         key, sep, value = line.partition(":")
         if sep and key.strip().lower() in fields:
             fields[key.strip().lower()].append(value.strip())
-    if fields["model"] != ["622GW"] or fields["firmware"] != ["R13.3"]:
-        raise RepairError("Only one Model: 622GW and Firmware: R13.3 is supported.")
-    identifiers = []
+    if fields["model"] != ["622GW"]:
+        raise RepairError("Require exactly one Model: 622GW.")
+    if len(fields["firmware"]) != 1 or re.fullmatch(r"[ -~]{1,64}", fields["firmware"][0]) is None:
+        raise RepairError("Require one nonempty printable firmware version (up to 64 characters).")
     for name in ("serial no", "sd card serial no"):
         values = fields[name]
         if (len(values) != 1 or re.fullmatch(r"[A-Za-z0-9_.-]{1,64}", values[0]) is None
                 or values[0].lower() in ("unknown", "none", "na")
                 or re.fullmatch(r"(?:0[xX])?0+", values[0])):
             raise RepairError("Unique nonzero camera and SD-card serial fields are required.")
-        identifiers.append(values[0])
-    # Nextbase.info also contains changing battery, space, time and Bluetooth fields.
-    material = "model=622GW\nfirmware=R13.3\nserial_no=%s\nsd_serial_no=%s\n" % tuple(identifiers)
+    return {key: values[0] for key, values in fields.items()}
+
+
+def verify_identity(card, expected=None):
+    fields = identity_fields(card)
+    # Bind the actual firmware while ignoring changing battery/space/Bluetooth fields.
+    material = "model=622GW\nfirmware=%s\nserial_no=%s\nsd_serial_no=%s\n" % (
+        fields["firmware"], fields["serial no"], fields["sd card serial no"])
     identity = hashlib.sha256(material.encode("ascii")).hexdigest()
     if expected is not None and identity != expected:
         raise RepairError("Camera/card identity changed; this session cannot adopt it.")
@@ -565,7 +571,7 @@ class Wizard:
             self.say("Owned controls removed and card ejected. Results/claims retained; this is not a success verdict.")
 
     def run(self):
-        self.say("Nextbase 622GW / R13.3 — guided internal Drive A repair (" + getattr(self.host, "label", "computer") + ")")
+        self.say("Nextbase 622GW — guided internal Drive A repair (" + getattr(self.host, "label", "computer") + ")")
         self.say("Formatting erases A's settings/files. Proven on one camera; this new wizard is host-tested only.")
         self.say("You need a card reader, body USB data cable and steady power.")
         self.answer("With the camera off, connect its microSD through the reader. Press Return: ")
@@ -574,7 +580,9 @@ class Wizard:
             self.inspect_or_disarm(card)
             return
         check_clean_card(card)
-        self.confirm("Does the camera screen also say 622GW/R13.3, is the camera OFF, and is the card in a reader?")
+        firmware = identity_fields(card)["firmware"]
+        self.say("Detected firmware: " + firmware + ". No version whitelist; only R13.3 was hardware-tested.")
+        self.confirm("Does the camera screen say 622GW with this firmware, is the camera OFF, and is the card in a reader?")
         self.confirm("Have you preserved the files/settings/recordings you need and arranged steady USB power? No videos are copied by this tool.")
         health = self.host.verify(card)
         identity = verify_identity(card)
@@ -583,7 +591,7 @@ class Wizard:
         write_new(self.journal.directory / "Nextbase.info", read_regular(card / "Nextbase.info", limit=65536))
         self.say("Keep this private evidence folder: " + str(self.journal.directory))
 
-        self.say("1/5 Prepare: check the exact build/fault and capture Drive A through read-only interfaces.")
+        self.say("1/5 Prepare: check storage compatibility/fault and capture Drive A through read-only interfaces.")
         files = {n: self.advanced / n for n in ("bt-nand-backup.sh", "nb-mtd-readonly", "nb-mtd-readonly.sha256", "usb.console")}
         files.update({"nb-a-preflight.sh": self.payload / "nb-a-preflight.sh",
                       "autoexec.ash": self.payload / "preflight.autoexec.ash"})
@@ -593,9 +601,9 @@ class Wizard:
         for name in ("nb-a-preflight", "bt-nand-backup-1"):
             snapshot_results(card / name, self.journal.directory / name)
         hook_hash, script_hash = digest(files["autoexec.ash"]), digest(files["nb-a-preflight.sh"])
-        verify_preflight(self.journal.directory / "nb-a-preflight", identity, hook_hash, script_hash)
+        verify_preflight(self.journal.directory / "nb-a-preflight", identity, hook_hash, script_hash, firmware)
         verify_backup(self.journal.directory / "bt-nand-backup-1", hook_hash)
-        self.say("Exact build/fault and complete A capture verified. A restore method is NOT proven.")
+        self.say("Storage compatibility/fault and complete A capture verified. A restore method is NOT proven.")
         clear_controls(card, self.journal)
 
         for name in ("NBFA01.claimed", "NBFA02.claimed"):
@@ -612,7 +620,7 @@ class Wizard:
             raise RepairError("Format claim exists before approval; never re-arm it.")
         self.recheck_capture("dryrun")
         self.recheck_capture("rehearsal_skip")
-        verify_preflight(self.journal.directory / "nb-a-preflight", identity, hook_hash, script_hash)
+        verify_preflight(self.journal.directory / "nb-a-preflight", identity, hook_hash, script_hash, firmware)
         verify_backup(self.journal.directory / "bt-nand-backup-1", hook_hash)
         write_new(self.journal.directory / "pre-format-sd-check.txt", self.host.verify(card))
         self.journal.data["phase"] = "rehearsed"

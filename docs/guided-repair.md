@@ -1,8 +1,8 @@
 # Guided Drive A repair
 
-Release **0.6.0** provides **`Nextbase622GW-Repair.exe`** in the Windows ZIP and **`Repair Bluetooth.app`** in the Apple Silicon/Intel Mac ZIPs, in the extracted kit's root. Both use the same persistent-repair workflow, compatibility checks and typed format confirmation. The older launchers inside `recovery-kit/` perform temporary RAM recovery only.
+Release **0.7.0** provides **`Nextbase622GW-Repair.exe`** in the Windows ZIP and **`Repair Bluetooth.app`** in the Apple Silicon/Intel Mac ZIPs, in the extracted kit's root. Both use the same persistent-repair workflow, compatibility checks and typed format confirmation. The older launchers inside `recovery-kit/` perform temporary RAM recovery only.
 
-**Formatting erases internal Drive A files/settings.** The underlying repair worked on one **Nextbase 622GW / R13.3**; pairing survived two full power-offs, including a boot without diagnostic hooks. The new host wizard and its compatibility preflight are fixture-tested, **not camera-tested end to end**. Other models/builds, long-term flash health and a working NAND restore method are unproven. A zero MAC alone is not a diagnosis.
+**Formatting erases internal Drive A files/settings.** The underlying repair worked on one **Nextbase 622GW / R13.3**; pairing survived two full power-offs, including a boot without diagnostic hooks. The new host wizard and its compatibility preflight are fixture-tested, **not camera-tested end to end**. Firmware versions are not restricted; other versions, long-term flash health and a working NAND restore method remain unproven. Other camera models are refused. A zero MAC alone is not a diagnosis.
 
 ## Before starting
 
@@ -18,12 +18,12 @@ The Windows host uses built-in PowerShell and Win32 APIs. It checks an external 
 
 ## Download, verify and open
 
-Download the **Windows ZIP** or the **Mac ZIP for your chip**, plus `SHA256SUMS.txt`, from the [0.6.0 release](https://github.com/DonLofto/Nextbase622GW/releases/tag/v0.6.0). Verify the ZIP you downloaded.
+Download the **Windows ZIP** or the **Mac ZIP for your chip**, plus `SHA256SUMS.txt`, from the [0.7.0 release](https://github.com/DonLofto/Nextbase622GW/releases/tag/v0.7.0). Verify the ZIP you downloaded.
 
 On **Windows PowerShell**, from your download folder:
 
 ```powershell
-$name = 'Nextbase622GW-Windows-0.6.0.zip'
+$name = 'Nextbase622GW-Windows-0.7.0.zip'
 $lines = @(Get-Content -LiteralPath .\SHA256SUMS.txt | Where-Object { $_.EndsWith("  $name") })
 if ($lines.Count -ne 1) { throw 'Missing or duplicate checksum' }
 $expected = ($lines[0] -split '  ', 2)[0]
@@ -34,7 +34,7 @@ On **macOS Terminal**, from your download folder:
 
 ```sh
 # For Intel, change arm64 to x86_64.
-grep '  Nextbase622GW-Mac-arm64-0.6.0.zip$' SHA256SUMS.txt | shasum -a 256 -c -
+grep '  Nextbase622GW-Mac-arm64-0.7.0.zip$' SHA256SUMS.txt | shasum -a 256 -c -
 ```
 
 Require `OK`; stop on any error or mismatch. Extract the **entire ZIP** onto the computer, outside the card, and keep its folders together. Windows users open **`Nextbase622GW-Repair.exe`**; no Python installation is required. The EXE is unsigned, so Windows may show a publisher warning. Only run a verified download from this repository's release.
@@ -67,11 +67,11 @@ On Windows, identify the camera's USB COM interface in Device Manager, then use 
 
 ## What the prompts do
 
-The tool verifies the kit and camera/card identity, refuses existing hooks/update files or previous claims, and checks the SD filesystem without repairing it. You must confirm the camera screen also says **622GW / R13.3**, that it is powered off during card handling, and that you have preserved what you need.
+The tool verifies the kit and camera/card identity, refuses existing hooks/update files or previous claims, and checks the SD filesystem without repairing it. Any firmware version is accepted on a **622GW**. Confirm the camera screen matches the model and firmware reported by the card, that it is powered off during card handling, and that you have preserved what you need. The actual firmware is bound to the session; changing firmware during a repair is refused.
 
 | Phase | What happens |
 |---|---|
-| **1. Prepare** | A read-only device preflight requires the exact runtime/vendor hashes, genuine A-backed storage and the documented configuration-creation failure. The frozen reader captures Drive A. The computer verifies lengths, read coverage, statuses, hashes and provenance. Two further cold boots must show `NBFA01_DRYRUN`, then `NBFA01_SKIP`, with the empty claim retained. The SD filesystem is checked again. |
+| **1. Prepare** | A read-only device preflight requires ARMv7, the required vendor files, genuine A-backed storage and the documented configuration-creation failure. Firmware/kernel versions and vendor hashes are recorded, without a version/build allowlist. The read-only reader captures Drive A and verifies its actual partition geometry. The computer verifies lengths, read coverage, statuses, hashes and provenance. Two further cold boots must show `NBFA01_DRYRUN`, then `NBFA01_SKIP`, with the empty claim retained. The SD filesystem is checked again. |
 | **2. Run once** | After the warnings, approve exactly one format by typing **`FORMAT DRIVE A ONCE`**. Approval is durably consumed before the unchanged native format hook is staged. The tool requires one `NBFA02_BEGIN` and the exact vendor result **`Drive 'A' format done.`**. |
 | **3. Pair** | A stock cold boot must show `NBFA02_SKIP` and Bluetooth startup, with no second format. Stop recording, open **Connected App → Setup phone → OK**, pair using the Nextbase app, and confirm it shows the camera or recordings. |
 | **4. Verify after reboot** | The format hook is removed and a read-only observer is staged. After a full power-off, reconnect the app using its **existing pairing**, without Setup phone. The computer checks saved configuration/pairing XML and genuine A-backed mounts, with no RAM overlay. |
@@ -92,6 +92,8 @@ For safe removal of staged controls after a controlled shutdown:
 1. With the camera fully off, connect the **same card** through the reader and reopen the launcher on the **same computer and account** (administrator on Windows).
 2. An existing session offers its status and private evidence path. Press Return to quit, or type **`DISARM`** and confirm card handling to remove only unchanged, verified owned controls.
 3. The tool retains claims, results, the inert session marker and private evidence, then ejects the card. Disarming is **not** a repair-success verdict.
+
+For an already started session, use the original kit version to inspect/disarm it; do not switch kits or start a fresh attempt to get around a refusal.
 
 Relaunching never resumes, re-arms or starts another format, even if the first attempt was interrupted before staging. Modified/unowned files or a missing/mismatched journal require review; they are not automatically deleted or adopted. Do not remove markers or create a new journal to get around a refusal.
 
@@ -115,7 +117,7 @@ python -m venv .venv-build
 .\.venv-build\Scripts\python.exe tools/build_windows.py
 ```
 
-The output is `dist/Nextbase622GW-Windows-0.6.0.zip` with the EXE, bundled runtime, repair resources, README, CLAUDE and source. `dist/windows-build.json` records the source commit in CI and runtime hashes. Python's redistribution license and the project license are included under `_internal/licenses/`.
+The output is `dist/Nextbase622GW-Windows-0.7.0.zip` with the EXE, bundled runtime, repair resources, README, CLAUDE and source. `dist/windows-build.json` records the source commit in CI and runtime hashes. Python's redistribution license and the project license are included under `_internal/licenses/`.
 
 [Native Windows CI](../.github/workflows/test.yml) extracts the ZIP, copies only the EXE and `_internal` into an isolated directory, and runs it with no Python on `PATH`. It verifies packaged assets, rejects tampered assets and noninteractive/automatic consent, and checks the console/admin manifest. The full shared consent/workflow tests run separately. These tests do not exercise camera hardware or the interactive UAC desktop prompt.
 
@@ -131,8 +133,8 @@ python3.12 -m venv .venv-build
 .venv-build/bin/python tools/build_macos.py
 ```
 
-Outputs are `dist/Nextbase622GW-Mac-arm64-0.6.0.zip` or `dist/Nextbase622GW-Mac-x86_64-0.6.0.zip`, plus a build report with source commit/engine hashes in CI. The app embeds a non-elevated PyInstaller engine with Python, the unchanged camera resources, passive reader and redistribution licenses. Its Finder launcher opens the bundled command in Terminal through Launch Services; it does not require Automation permission. The app is ad-hoc signed, not notarized. No signing account or private certificate is embedded.
+Outputs are `dist/Nextbase622GW-Mac-arm64-0.7.0.zip` or `dist/Nextbase622GW-Mac-x86_64-0.7.0.zip`, plus a build report with source commit/engine hashes in CI. The app embeds a non-elevated PyInstaller engine with Python, the reviewed camera resources, passive reader and redistribution licenses. Its Finder launcher opens the bundled command in Terminal through Launch Services; it does not require Automation permission. The app is ad-hoc signed, not notarized. No signing account or private certificate is embedded.
 
 CI builds on macOS 15 for both chips, extracts with `ditto`, moves the app into a path containing spaces/apostrophes, and runs with no Python on PATH. Tests check resources, signatures/executable permissions, noninteractive/automatic-consent refusal, and the bundled passive reader through a real pseudoterminal, including no transmission and terminal-setting restoration. A pseudoterminal is not a camera. Hardware repair and Gatekeeper approval on a downloaded/quarantined app remain separate from these checks.
 
-The source-only ZIP still includes `Repair Bluetooth.command` and `Repair Bluetooth.cmd` for Python 3.9+ users. No camera payload or destructive consent rule changes with packaging. Extract the Mac ZIP using Finder/Archive Utility or `ditto -x -k` to preserve executable permissions and signing metadata.
+The source-only ZIP still includes `Repair Bluetooth.command` and `Repair Bluetooth.cmd` for Python 3.9+ users. Packaging preserves the shared destructive consent rules. Version0.7.0 removes firmware/build allowlists from the read-only preflight and backup wrapper; the native format/rehearsal/observer hooks and NAND reader are unchanged. Extract the Mac ZIP using Finder/Archive Utility or `ditto -x -k` to preserve executable permissions and signing metadata.

@@ -53,8 +53,8 @@ class PersistentResultTests(unittest.TestCase):
             self.write("capture-hashes.txt", (self.folder / name).read_bytes())
 
     def preflight(self):
-        fields = dict(model="622GW", firmware="R13.3", machine="armv7l", kernel="4.9.76",
-                      **VENDOR, identity_sha256=getattr(self, "identity_hash", sha(self.identity)), script_sha256=sha(self.script),
+        fields = dict(model="622GW", firmware=getattr(self, "firmware", "R13.3"), machine="armv7l", kernel=getattr(self, "kernel", "4.9.76"),
+                      **getattr(self, "vendor_hashes", VENDOR), identity_sha256=getattr(self, "identity_hash", sha(self.identity)), script_sha256=sha(self.script),
                       hook_sha256=sha(self.hook), fl_mount="ambafs_a", failure="BT_DEFAULT_CONFIG_CREATE_FAILED")
         self.write("RESULT.txt", "PREFLIGHT_VERIFIED\n" + "".join(k + "=" + v + "\n" for k, v in fields.items()))
         self.write("failure-console.bin", b"bt_config.xml\nUnable to Create default configuration\n")
@@ -62,7 +62,7 @@ class PersistentResultTests(unittest.TestCase):
         self.manifest("SHA256SUMS", ("RESULT.txt", "failure-console.bin", "mounts.txt"))
 
     def verify_preflight(self):
-        self.result.verify_preflight(self.folder, sha(self.identity), sha(self.hook), sha(self.script))
+        self.result.verify_preflight(self.folder, sha(self.identity), sha(self.hook), sha(self.script), getattr(self, "firmware", "R13.3"))
 
     def backup(self):
         self.write("RESULT.txt", "PARTITION_CAPTURE_VERIFIED\nreason=all selected-partition components, statuses, lengths and hashes verified\nrestorable_nand_backup=no\nfull_nand_backup=no\nOnly the selected DRIVE_A partition was requested; no repair or internal write was attempted.\nA timed-out child may remain until reboot; its partial files may still change.\n")
@@ -143,6 +143,20 @@ class PersistentResultTests(unittest.TestCase):
 
     def test_complete_preflight_verifies(self):
         self.preflight(); self.verify_preflight()
+
+    def test_other_firmware_kernel_and_vendor_hashes_are_evidence_not_allowlists(self):
+        for firmware in ("R10.0", "R13.2", "R15.1-beta + test"):
+            self.firmware = firmware
+            self.kernel = "6.6.0-custom"
+            self.vendor_hashes = {key: sha((key + firmware).encode()) for key in VENDOR}
+            self.preflight(); self.verify_preflight()
+
+    def test_malformed_runtime_metadata_and_vendor_hashes_are_refused(self):
+        for old, replacement in (("kernel=4.9.76", "kernel="), ("kernel=4.9.76", "kernel=bad kernel"),
+                                 (VENDOR["amazon_sha256"], "bad"), (VENDOR["hcd_sha256"], "0" * 64)):
+            self.preflight(); data=(self.folder / "RESULT.txt").read_text().replace(old, replacement)
+            self.write("RESULT.txt", data); self.manifest("SHA256SUMS", ("RESULT.txt", "failure-console.bin", "mounts.txt"))
+            with self.assertRaises(self.result.RepairError): self.verify_preflight()
 
     def test_preflight_changed_identity_duplicate_field_and_foreign_build_refuse(self):
         self.preflight(); original = (self.folder / "RESULT.txt").read_text()

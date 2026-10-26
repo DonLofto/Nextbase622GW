@@ -1,4 +1,4 @@
-"""Protect frozen camera-tested assets; these tests do not exercise hardware."""
+"""Protect reviewed assets and unchanged camera-tested capture behavior; these tests do not exercise hardware."""
 import hashlib
 from pathlib import Path
 import struct
@@ -7,12 +7,12 @@ import unittest
 
 ASSETS = Path(__file__).resolve().parents[1] / "advanced" / "internal-drive-a"
 
-# Trusted hardware-byte boundary, plus the matching source/build provenance.
+# Trusted reviewed bytes; only backup wrapper identity/runtime gates changed in 0.7.0.
 # Never regenerate these expectations automatically when payloads change.
 EXPECTED_SHA256 = {
     "usb.console": "2b19515c1ee1515adc54d58c62cac67679ad3493185cddfe92e5872a5a8527f3",
     "backup.autoexec.ash": "3721a8b33d9c7b2631030df90969482e09bfe836a1d3dbaee02bfc7cf832d470",
-    "bt-nand-backup.sh": "32c4ccbdbb44d89cf5e6e122270c6c6d568c2efa623960c55a14006ccc53f365",
+    "bt-nand-backup.sh": "5492a73791eedf4ede299bf5c407cb5dd4beaf3b71c1b64edc585aab73e9072e",
     "nb-mtd-readonly": "81a849c7863b9024d73e9195be06ffefd64eb5a28811c619d20c53f9814fcaf7",
     "nb-mtd-readonly.sha256": "a1b7fadcbe25e2f2c64ee1389083f45febd04b4dd63d19cec0081f443d8c1aad",
     "nb-mtd-readonly.c": "77055e64a359601745023875141cb615d1af8dd487a04f1c8b0e7105466cea46",
@@ -25,7 +25,12 @@ EXPECTED_SHA256 = {
 
 
 class AdvancedAssetTests(unittest.TestCase):
-    def test_frozen_assets_match_tested_bytes_and_build_provenance(self):
+    def test_backup_capture_body_stays_identical_to_hardware_tested_wrapper(self):
+        text = (ASSETS / "bt-nand-backup.sh").read_bytes()
+        body = text[text.index(b'for path in "$sd"/*;'):]
+        self.assertEqual(hashlib.sha256(body).hexdigest(), "cf80cf582b5f4baa1e6bbb1d054c70ffed34a47419fc2e832a72b57416e5bd66")
+
+    def test_assets_match_reviewed_bytes_and_build_provenance(self):
         for name, expected in EXPECTED_SHA256.items():
             with self.subTest(asset=name):
                 path = ASSETS / name

@@ -4,6 +4,8 @@
 printf 'NAND capture wrapper entered.\n'
 PATH=/bin:/sbin:/usr/bin:/usr/sbin
 export PATH
+LC_ALL=C
+export LC_ALL
 umask 077
 sd=/tmp/SD0
 proc=/proc
@@ -32,13 +34,13 @@ file_hash() {
 [ -d "$sd" ] && [ ! -L "$sd" ] || refuse 'invalid SD directory'
 [ -d "$tmp" ] && [ ! -L "$tmp" ] || refuse 'invalid RAM directory'
 [ "$(id -u)" = 0 ] || refuse 'root is required'
-[ "$(uname -m)" = armv7l ] && [ "$(uname -r)" = 4.9.76 ] || refuse 'unsupported Linux runtime'
+[ "$(uname -m)" = armv7l ] || refuse 'unsupported CPU architecture'
 awk -v target="$tmp" '$2 == target && $3 == "tmpfs" { found=1 } END { exit !found }' "$proc/mounts" || refuse 'temporary directory is not RAM backed'
 regular "$sd/Nextbase.info" || refuse 'missing regular camera identity'
 awk '
     tolower($0) ~ /^[[:space:]]*model[[:space:]]*:/ { m++; value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*$/, "", value); model=value }
     tolower($0) ~ /^[[:space:]]*firmware[[:space:]]*:/ { f++; value=$0; sub(/^[^:]*:[[:space:]]*/, "", value); sub(/[[:space:]]*$/, "", value); firmware=value }
-    END { exit !(m == 1 && f == 1 && model == "622GW" && firmware == "R13.3") }
+    END { exit !(m == 1 && f == 1 && model == "622GW" && length(firmware) <= 64 && firmware ~ /^[[:print:]]+$/) }
 ' "$sd/Nextbase.info" || refuse 'unsupported or ambiguous model/firmware'
 for path in "$sd"/*; do
     name=${path##*/}

@@ -11,11 +11,11 @@ class RepairError(ValueError):
     """Evidence is missing, unsafe, incomplete, or incompatible."""
 
 
-# Frozen camera-tested bytes. Do not regenerate these values from local files.
+# Reviewed bytes: backup wrapper version gates changed in 0.7.0; other assets stay frozen.
 ADVANCED_HASHES = {
     "usb.console": "2b19515c1ee1515adc54d58c62cac67679ad3493185cddfe92e5872a5a8527f3",
     "backup.autoexec.ash": "3721a8b33d9c7b2631030df90969482e09bfe836a1d3dbaee02bfc7cf832d470",
-    "bt-nand-backup.sh": "32c4ccbdbb44d89cf5e6e122270c6c6d568c2efa623960c55a14006ccc53f365",
+    "bt-nand-backup.sh": "5492a73791eedf4ede299bf5c407cb5dd4beaf3b71c1b64edc585aab73e9072e",
     "nb-mtd-readonly": "81a849c7863b9024d73e9195be06ffefd64eb5a28811c619d20c53f9814fcaf7",
     "nb-mtd-readonly.sha256": "a1b7fadcbe25e2f2c64ee1389083f45febd04b4dd63d19cec0081f443d8c1aad",
     "nb-mtd-readonly.c": "77055e64a359601745023875141cb615d1af8dd487a04f1c8b0e7105466cea46",
@@ -25,11 +25,7 @@ ADVANCED_HASHES = {
     "persistence.autoexec.ash": "3be8cfa85083666b5230ab8ca88dddc671f600dba9455a6ad89e64c6f9d9cbf4",
     "bt-persistence-capture.sh": "8196a3f846c1771bedd6ddc975aab15438c084a34141dbe3a7136fedf360b837",
 }
-_VENDOR = {
-    "amazon_sha256": "ea1ad4c2969abffee176364eef67e5df24b37598de18862ab5866eb86b64b054",
-    "bsa_sha256": "3fab6b79dc0becd8b4dd5f9c710989463661d6905f2e2e265d5a5377dea20747",
-    "hcd_sha256": "093bd3c261df7809ab30c77ca2d8d7870f5db66622d86d6125a17fd7295f6e55",
-}
+_VENDOR_FIELDS = {"amazon_sha256", "bsa_sha256", "hcd_sha256"}
 _BACKUP_FILES = (
     "DRIVE_A-corrected-main.bin", "DRIVE_A-raw-main.bin", "DRIVE_A-raw-oob.bin",
     "DRIVE_A-badblocks.tsv", "read-status.tsv", "helper-summary.txt",
@@ -127,7 +123,7 @@ def _manifest(folder, filename, expected, allow_paths=False):
 def verify_advanced(directory):
     """Pin both the manifest and each asset to the independently reviewed bytes."""
     recorded = _manifest(directory, "SHA256SUMS", ADVANCED_HASHES)
-    _require(recorded == ADVANCED_HASHES, "Advanced assets differ from the camera-tested files.")
+    _require(recorded == ADVANCED_HASHES, "Advanced assets differ from the reviewed files.")
 
 
 def _a_mounts(text, targets):
@@ -137,15 +133,23 @@ def _a_mounts(text, targets):
                  "Stock internal AmbaFS mount evidence is missing or ambiguous.")
 
 
-def verify_preflight(folder, identity_hash, hook_hash, script_hash):
+def verify_preflight(folder, identity_hash, hook_hash, script_hash, firmware):
     folder = Path(folder)
     _manifest(folder, "SHA256SUMS", {"RESULT.txt", "failure-console.bin", "mounts.txt"})
     text = _text(folder / "RESULT.txt", 8192)
     _require(text.startswith("PREFLIGHT_VERIFIED\n"), "Device compatibility preflight did not succeed.")
-    expected = dict(model="622GW", firmware="R13.3", machine="armv7l", kernel="4.9.76", **_VENDOR,
+    expected = dict(model="622GW", firmware=firmware, machine="armv7l",
                     identity_sha256=identity_hash, script_sha256=script_hash, hook_sha256=hook_hash,
                     fl_mount="ambafs_a", failure="BT_DEFAULT_CONFIG_CREATE_FAILED")
-    _require(_fields(text.split("\n", 1)[1]) == expected, "Device compatibility preflight does not match this session.")
+    fields = _fields(text.split("\n", 1)[1])
+    _require(set(fields) == set(expected) | _VENDOR_FIELDS | {"kernel"} and
+             all(fields[key] == value for key, value in expected.items()),
+             "Device compatibility preflight does not match this session.")
+    _require(re.fullmatch(r"[ -~]{1,64}", firmware) is not None and
+             re.fullmatch(r"[A-Za-z0-9._+-]{1,128}", fields["kernel"]) is not None,
+             "Firmware/kernel metadata is malformed.")
+    _require(all(re.fullmatch(r"[0-9a-f]{64}", fields[key]) and fields[key] != "0" * 64 for key in _VENDOR_FIELDS),
+             "Vendor hash evidence is malformed.")
     console = read_regular(folder / "failure-console.bin", 16384)
     _require(re.search(rb"bt_config\.xml.*Unable to Create defaul", console, re.S) is not None,
              "The documented configuration-creation failure is not established.")

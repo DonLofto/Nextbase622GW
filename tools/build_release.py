@@ -7,7 +7,7 @@ from pathlib import Path
 import tempfile
 import zipfile
 
-VERSION = "0.6.0"
+VERSION = "0.7.0"
 PREFIX = f"Nextbase622GW-recovery-{VERSION}/"
 PAYLOAD_FILES = ("autoexec.ash", "nb-bt-recover.sh", "usb.console")
 ADVANCED_DIRECTORY = "advanced/internal-drive-a/"

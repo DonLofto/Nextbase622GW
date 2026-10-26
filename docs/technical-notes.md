@@ -33,17 +33,17 @@ Raw captures and populated configuration remain private because they identify th
 
 ## Packaged operation
 
-Distribution **0.4.0** provides root **`Repair Bluetooth.cmd`** on Windows and **`Repair Bluetooth.command`** on macOS, sharing the same guided persistent-repair workflow. The separate temporary component inside `recovery-kit/` remains **0.2.0**, with unchanged payload/ownership semantics. The [manual Drive A procedure](internal-storage-repair.md) remains the reference for the frozen advanced assets.
+Distribution **0.7.0** provides a Windows EXE and Apple Silicon/Intel Mac apps with bundled Python, sharing the same guided persistent-repair workflow. Source `.cmd`/`.command` launchers remain available for Python users. The separate temporary component inside `recovery-kit/` remains **0.2.0**, with unchanged payload/ownership semantics. The [manual Drive A procedure](internal-storage-repair.md) remains the reference for the reviewed advanced assets.
 
 ### Guided persistent repair
 
-The [guided launchers](guided-repair.md) use Python 3.9+ standard-library code, a card reader and passive body-USB capture. It verifies the kit, card identity and SD health, then stages a new read-only preflight that checks the exact runtime/vendor hashes, genuine A-backed AmbaFS and the documented default-configuration creation failure before invoking the frozen partition-capture wrapper. Complete capture sizes, read coverage, statuses, hashes and provenance must verify on the Mac.
+The [guided launchers](guided-repair.md) use Python 3.9+ standard-library code, a card reader and passive body-USB capture. It verifies the kit, card identity and SD health, then stages a new read-only preflight that checks ARMv7, required vendor files, genuine A-backed AmbaFS and the documented default-configuration creation failure before invoking the read-only partition-capture wrapper. It accepts any firmware version and records actual firmware/kernel/vendor hashes as evidence, without comparing them to a build allowlist. Complete capture sizes, read coverage, statuses, hashes and provenance must verify on the Mac.
 
 The launcher requires the harmless DRYRUN/second-cold-boot SKIP rehearsal and another clean SD check before its destructive prompt. Exact typed approval, `FORMAT DRIVE A ONCE`, is durably consumed in the private journal before staging the unchanged native format hook. It requires one BEGIN and the exact vendor completion line, then a stock cold-boot SKIP/Bluetooth startup, owner-confirmed app pairing, a read-only observer cold boot with existing-pairing reconnection and verified A-backed XML, removal of active controls, and another ordinary cold-boot app reconnection.
 
 An inert `nb-a-repair.json` on the card binds the attempt to a private UUID journal under `~/Nextbase622GW Repairs/`. Relaunch offers inspection or removal of verified unchanged owned controls only; it never resumes or re-arms a format. Claims/results/evidence remain. No videos are copied. A missing result stops progression; Ctrl+C cannot cancel an in-camera format, and no finite format deadline is proven.
 
-The guided launchers are host/fixture-tested, not camera-tested end to end. The previously demonstrated manual repair and frozen asset hashes do not establish physical behavior of this orchestration or Windows USB transport. Windows uses a separate native host backend; camera scripts, compatibility/fault checks, typed format consent and the no-retry state machine are shared.
+The guided launchers are host/fixture-tested, not camera-tested end to end. The previously demonstrated manual repair and original asset hashes do not establish physical behavior of this orchestration or Windows USB transport. Windows uses a separate native host backend; camera scripts, compatibility/fault checks, typed format consent and the no-retry state machine are shared.
 
 ### Windows host support
 
@@ -91,7 +91,7 @@ The formatter expects initialized working FTL geometry; it is not a demonstrated
 
 ## Compatibility identities
 
-Only the examined R13.3 build is accepted by the device preflight:
+These hashes identify the examined R13.3 build. The guided persistent repair records actual hashes and accepts any firmware version; these are reference values, not an allowlist. The separate temporary RAM recovery remains pinned to this build:
 
 | File on camera | SHA256 |
 |---|---|
@@ -128,3 +128,5 @@ Local **0.3.0** validation passed **109 Python tests**: the existing cases plus 
 ## Privacy and distribution
 
 The public release builder uses an explicit allowlist for documentation, license, the guided host launcher/preflight, generic temporary tools/payloads, tests and the inactive advanced assets. The advanced helper is project source and its reproducibly built ARM executable; vendor firmware/binaries and captured NAND/configuration data are not distributed. Separate manifests cover temporary payloads, advanced files and the new read-only preflight. Original device information, logs, XML, pairing keys, recordings and private handoff notes remain excluded. Keep capture/result folders private rather than attaching them unredacted to public issues.
+
+Firmware-neutral guided repair in **0.7.0** removes R13.3, kernel-release and vendor-hash allowlists from the host/preflight and the read-only backup wrapper. The wrapper's capture body is byte-identical to the original tested body; a separate regression digest pins it. The NAND helper, native format hook, rehearsal and observer are unchanged. Actual A-backed mounts, fixed DRIVE_A geometry/read coverage, required vendor files, bounded fault proof, complete results, identity binding and one-format consent remain mandatory. Other firmware may fail those checks if it exposes different interfaces/layouts; acceptance of its version label is not proof of hardware compatibility. Use the original kit for an active older session.

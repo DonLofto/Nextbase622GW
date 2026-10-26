@@ -13,9 +13,9 @@ Read:
 3. [Technical notes](docs/technical-notes.md) — established fault, compatibility identities and evidence limits.
 4. [Manual procedure](docs/internal-storage-repair.md) — exact native phases and advanced asset reference; required before manual staging.
 
-The supported case is **622GW / R13.3** with failure to create `/tmp/FL0/bt_config.xml` on internal RTOS Drive A. A zero MAC or failed pairing alone is insufficient. Fresh device identity, fault, SD health, preservation and app checks are execution requirements, not reasons to restart research. A mismatch stops the affected write operation. Investigate another device/build/fault only when explicitly requested as separate work.
+The guided repair accepts **any firmware version on a 622GW**, with failure to create `/tmp/FL0/bt_config.xml` on internal RTOS Drive A. A zero MAC or failed pairing alone is insufficient. Fresh device identity, fault, SD health, preservation and app checks are execution requirements, not reasons to restart research. A storage/platform/fault mismatch stops the affected write operation. Do not impose a firmware version, kernel version or vendor-binary hash allowlist. Record the actual firmware/kernel/hashes and bind the actual firmware to the session. Other models or faults need separate work.
 
-The underlying vendor `format a:` repair succeeded once on one unit. Existing app pairing survived two subsequent full power-offs, including an ordinary boot after hooks/tokens were removed. The **0.6.0 Windows/macOS guided launchers are host/fixture-tested, not camera-tested end to end**. Windows/camera USB behavior is also unvalidated. Original corruption cause, long-term NAND health, physically uncorrected RAW fidelity and a working NAND restore route remain unproven.
+The underlying vendor `format a:` repair succeeded once on one unit. Existing app pairing survived two subsequent full power-offs, including an ordinary boot after hooks/tokens were removed. The **0.7.0 Windows/macOS guided launchers are host/fixture-tested, not camera-tested end to end**. Windows/camera USB behavior is also unvalidated. Original corruption cause, long-term NAND health, physically uncorrected RAW fidelity and a working NAND restore route remain unproven.
 
 ## Use the guided path
 
@@ -23,7 +23,7 @@ Help the owner verify and fully extract the correct release ZIP. On Windows 10/1
 
 The launcher already handles staging/readback, ejection, passive capture, evidence verification and this sequence:
 
-1. Exact build/fault preflight followed by the frozen read-only Drive A capture; verify complete results.
+1. Platform/storage/fault preflight followed by the reviewed read-only Drive A capture; verify complete results.
 2. Harmless first-boot `NBFA01_DRYRUN`, then full-power-off `NBFA01_SKIP`; verify the retained empty claim and SD health.
 3. Explicit typed **`FORMAT DRIVE A ONCE`**. The private journal consumes this authorization durably **before** format staging. Require one `NBFA02_BEGIN` and exact **`Drive 'A' format done.`**.
 4. Stock cold boot with `NBFA02_SKIP` and Bluetooth startup; owner pairs and verifies actual camera/recordings access.
@@ -42,13 +42,13 @@ Sessions live privately under **`~/Nextbase622GW Repairs/<UUID>/`** (Windows: `%
 
 ## Separate paths
 
-- **Manual persistent repair:** use the [complete manual guide](docs/internal-storage-repair.md), its exact sequence and [frozen advanced manifest](advanced/internal-drive-a/SHA256SUMS). Native hooks do not identify the model/build themselves. Do useful preparation first and obtain informed approval for one destructive attempt before staging it. A capture has no proven restore route. Keep consumed NBFA02; never rearm it.
-- **Temporary app access:** use the existing Mac/Windows launchers inside `recovery-kit/`, documented in [temporary recovery](docs/temporary-recovery.md). That unchanged component is version **0.2.0**, is lost on reboot and is separate from the persistent launcher. Its original RAM operation worked on hardware; the guarded distribution remains untested end to end on a camera.
+- **Manual persistent repair:** use the [complete manual guide](docs/internal-storage-repair.md), its exact sequence and [reviewed advanced manifest](advanced/internal-drive-a/SHA256SUMS). Native hooks do not identify the model/build themselves. Do useful preparation first and obtain informed approval for one destructive attempt before staging it. A capture has no proven restore route. Keep consumed NBFA02; never rearm it.
+- **Temporary app access (separate, still R13.3-specific):** use the existing Mac/Windows launchers inside `recovery-kit/`, documented in [temporary recovery](docs/temporary-recovery.md). That unchanged component is version **0.2.0**, is lost on reboot and is separate from the persistent launcher. Its original RAM operation worked on hardware; the guarded distribution remains untested end to end on a camera.
 - **Windows:** the guided path uses the same state machine and camera files, with a Windows-only host backend for metadata, status-only CHKDSK, safe ejection, write-through moves and passive USB COM capture. It preserves existing baud/DTR/RTS and restores serial settings. Ambiguous ports, wrong USB instances, internal/system disks, junctions/reparse points or failed checks stop it. Native host CI is not evidence of physical Windows/camera success. Do not bypass a refusal or guess COM/baud values.
 
 ## Maintenance and privacy
 
-Read the actual [launcher](persistent-repair/repair.py), [Windows host](persistent-repair/windows_host.py), [evidence verifiers](persistent-repair/results.py) and manifests before changing behavior. Keep frozen advanced camera-tested bytes and their trusted test hashes unchanged. The preflight has a separate manifest. A distribution version change does not imply changing temporary ownership text or its manifest. Respect the owner's instruction not to use subagents.
+Read the actual [launcher](persistent-repair/repair.py), [Windows host](persistent-repair/windows_host.py), [evidence verifiers](persistent-repair/results.py) and manifests before changing behavior. The format/rehearsal/observer hooks and NAND reader remain at their camera-tested bytes. In0.7.0 only the read-only backup wrapper's firmware/kernel gates changed, as the owner requested; its capture body is independently pinned to the original hardware-tested body. Preserve the reviewed wrapper hash and all remaining guards. Firmware allowlists are intentionally absent; do not reintroduce R13.3-only checks. The preflight has a separate manifest. A distribution version change does not imply changing temporary ownership text or its manifest. Respect the owner's instruction not to use subagents.
 
 Run appropriate repository checks after changes:
 
