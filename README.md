@@ -6,6 +6,8 @@
 
 **Warning:** This erases internal Drive A files/settings. The repair worked on **one 622GW running R13.3**, with pairing retained across two full power-offs. The new guided launcher is fixture-tested; it has **not** been run end to end on a camera. A zero Bluetooth MAC alone does not establish this fault.
 
+**Earlier firmware:** The same repair may also work on earlier 622GW firmware with this internal Drive A fault, but those versions have not been tested. The guided launchers currently require **R13.3** and refuse other versions; do not bypass their compatibility checks.
+
 ## Download and open
 
 | Computer | Download | Open after extracting the **entire ZIP** |
