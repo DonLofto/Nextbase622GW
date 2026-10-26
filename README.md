@@ -10,10 +10,11 @@
 
 | Computer | Download | Open after extracting the **entire ZIP** |
 |---|---|---|
-| **Windows 10/11 x64** | **[Windows kit 0.5.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.5.0/Nextbase622GW-Windows-0.5.0.zip)** | **`Nextbase622GW-Repair.exe`**; accept the administrator prompt |
-| **Mac** | **[Mac/source kit 0.5.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.5.0/Nextbase622GW-recovery-0.5.0.zip)** | **`Repair Bluetooth.command`**; requires Python 3.9+ |
+| **Windows 10/11 x64** | **[Windows kit 0.6.0](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-Windows-0.6.0.zip)** | **`Nextbase622GW-Repair.exe`**; accept the administrator prompt |
+| **Mac: Apple Silicon, macOS 15+** | **[Mac app: Apple Silicon](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-Mac-arm64-0.6.0.zip)** | **`Repair Bluetooth.app`** |
+| **Mac: Intel, macOS 15+** | **[Mac app: Intel](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-Mac-x86_64-0.6.0.zip)** | **`Repair Bluetooth.app`** |
 
-**Windows includes Python.** Keep the EXE and its `_internal` folder together; no installer or Python setup is needed. Verify your download using the **[checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.5.0/SHA256SUMS.txt)**. The EXE is unsigned. [Verification and help](docs/guided-repair.md).
+**Python is included on both platforms.** The Mac app opens Terminal for the guided prompts. On Windows, keep `_internal` beside the EXE. Verify the **[checksums](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/SHA256SUMS.txt)**. These community builds have no verified publisher; the Mac app is not notarized. [Verification and opening help](docs/guided-repair.md).
 
 You need a microSD reader, a USB data cable connected to the camera's **body** port, and steady power. Both platforms use the same checks and format confirmation.
 
@@ -29,6 +30,7 @@ If a check fails, stop. Relaunching offers inspection or removal of verified own
 
 ## Other paths and details
 
+- [Source kit](https://github.com/DonLofto/Nextbase622GW/releases/download/v0.6.0/Nextbase622GW-recovery-0.6.0.zip): legacy `.command`/`.cmd` launchers require Python 3.9+.
 - [Temporary RAM recovery](docs/temporary-recovery.md): existing Mac/Windows launchers; lost at reboot.
 - [Manual repair procedure](docs/internal-storage-repair.md) · [Research and limits](docs/technical-notes.md) · [Agent instructions](CLAUDE.md) · [MIT license](LICENSE)
 

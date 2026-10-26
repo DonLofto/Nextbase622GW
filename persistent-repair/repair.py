@@ -363,6 +363,11 @@ def read_live_capture(path, limit=32 * 1024 * 1024):
     return data
 
 
+def passive_reader_command(tool, output):
+    command = [sys.executable, "--passive-reader"] if getattr(sys, "frozen", False) else [sys.executable, str(tool)]
+    return command + ["--output", str(output)]
+
+
 class MacHost:
     label = "macOS"
 
@@ -396,7 +401,7 @@ class MacHost:
         if exists(output):
             raise RepairError("Capture path already exists; stale output cannot authorize another boot.")
         with (output.parent / (output.name + "-reader.txt")).open("xb") as errors:
-            command = [sys.executable, str(tool), "--output", str(output)]
+            command = passive_reader_command(tool, output)
             if self.port:
                 command.extend(["--port", self.port])
             process = subprocess.Popen(command,

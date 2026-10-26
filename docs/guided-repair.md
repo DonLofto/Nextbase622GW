@@ -1,6 +1,6 @@
 # Guided Drive A repair
 
-Release **0.5.0** provides **`Nextbase622GW-Repair.exe`** in the Windows ZIP and **`Repair Bluetooth.command`** in the Mac/source ZIP, in the extracted kit's root. Both use the same persistent-repair workflow, compatibility checks and typed format confirmation. The older launchers inside `recovery-kit/` perform temporary RAM recovery only.
+Release **0.6.0** provides **`Nextbase622GW-Repair.exe`** in the Windows ZIP and **`Repair Bluetooth.app`** in the Apple Silicon/Intel Mac ZIPs, in the extracted kit's root. Both use the same persistent-repair workflow, compatibility checks and typed format confirmation. The older launchers inside `recovery-kit/` perform temporary RAM recovery only.
 
 **Formatting erases internal Drive A files/settings.** The underlying repair worked on one **Nextbase 622GW / R13.3**; pairing survived two full power-offs, including a boot without diagnostic hooks. The new host wizard and its compatibility preflight are fixture-tested, **not camera-tested end to end**. Other models/builds, long-term flash health and a working NAND restore method are unproven. A zero MAC alone is not a diagnosis.
 
@@ -9,7 +9,7 @@ Release **0.5.0** provides **`Nextbase622GW-Repair.exe`** in the Windows ZIP and
 You need:
 
 - **Windows 10/11 x64:** Python is included. Open `Nextbase622GW-Repair.exe` and accept the administrator prompt for the read-only SD check and safe ejection; it does not approve formatting Drive A. Keep the EXE beside its `_internal` directory.
-- **macOS:** Python 3.9+ through `python3`, with no extra Python packages. Administrator access is not required.
+- **macOS 15+:** download the Apple Silicon (`arm64`) or Intel (`x86_64`) app for your Mac. Python is included; administrator access is not required. Choose Apple menu → About This Mac: “Chip” means Apple Silicon, “Processor: Intel” means Intel.
 - A working **microSD reader**, the camera's card, and a USB **data** cable for the camera body's port. The mount's port is power only.
 - Steady USB power, enough free space on the computer for private captures, and time to follow several shutdown/card-transfer/boot prompts without interrupting the camera.
 - Any files, recordings or settings you want preserved already saved elsewhere. **The launcher does not copy video recordings.** Its Drive A capture is not a full NAND backup and has no proven restore route.
@@ -18,12 +18,12 @@ The Windows host uses built-in PowerShell and Win32 APIs. It checks an external 
 
 ## Download, verify and open
 
-Download the **Windows ZIP** or **Mac/source ZIP**, plus `SHA256SUMS.txt`, from the [0.5.0 release](https://github.com/DonLofto/Nextbase622GW/releases/tag/v0.5.0). Verify the ZIP you downloaded.
+Download the **Windows ZIP** or the **Mac ZIP for your chip**, plus `SHA256SUMS.txt`, from the [0.6.0 release](https://github.com/DonLofto/Nextbase622GW/releases/tag/v0.6.0). Verify the ZIP you downloaded.
 
 On **Windows PowerShell**, from your download folder:
 
 ```powershell
-$name = 'Nextbase622GW-Windows-0.5.0.zip'
+$name = 'Nextbase622GW-Windows-0.6.0.zip'
 $lines = @(Get-Content -LiteralPath .\SHA256SUMS.txt | Where-Object { $_.EndsWith("  $name") })
 if ($lines.Count -ne 1) { throw 'Missing or duplicate checksum' }
 $expected = ($lines[0] -split '  ', 2)[0]
@@ -33,23 +33,24 @@ if ((Get-FileHash -LiteralPath $name -Algorithm SHA256).Hash -ine $expected) { t
 On **macOS Terminal**, from your download folder:
 
 ```sh
-grep '  Nextbase622GW-recovery-0.5.0.zip$' SHA256SUMS.txt | shasum -a 256 -c -
+# For Intel, change arm64 to x86_64.
+grep '  Nextbase622GW-Mac-arm64-0.6.0.zip$' SHA256SUMS.txt | shasum -a 256 -c -
 ```
 
 Require `OK`; stop on any error or mismatch. Extract the **entire ZIP** onto the computer, outside the card, and keep its folders together. Windows users open **`Nextbase622GW-Repair.exe`**; no Python installation is required. The EXE is unsigned, so Windows may show a publisher warning. Only run a verified download from this repository's release.
 
-Stop recording, fully power the camera off, and connect its card through the reader. Disconnect other compatible camera cards. On Windows, open **`Nextbase622GW-Repair.exe`** and accept the administrator prompt; on Mac, open **`Repair Bluetooth.command`**. Follow the prompts. Do not copy the launcher or whole kit to the SD card. Extract outside junctions, symlinks or cloud placeholder folders, which the tool refuses.
+Stop recording, fully power the camera off, and connect its card through the reader. Disconnect other compatible camera cards. On Windows, open **`Nextbase622GW-Repair.exe`** and accept the administrator prompt; on Mac, open **`Repair Bluetooth.app`**, which opens Terminal for the prompts. Follow the prompts. Do not copy the launcher or whole kit to the SD card. Extract outside junctions, symlinks or cloud placeholder folders, which the tool refuses.
 
-If Finder will not open the launcher, open Terminal in the extracted kit root and run:
+### Opening the Mac app
+
+The Mac app is ad-hoc signed for code integrity and **is not notarized or signed with Developer ID**. If macOS blocks it, verify the download first, try opening it, then follow **System Settings → Privacy & Security → Open Anyway** for this app and confirm. Do not disable Gatekeeper or run a command that removes quarantine. [Apple's opening instructions](https://support.apple.com/en-ie/102445).
+
+No Python installation is needed. The repair runs without administrator privileges. Keep the entire `.app` together; you may move it to Applications. It opens Terminal so you can read the warnings and type the format confirmation. Closing the window stops the host; it cannot cancel a format already running in the camera.
+
+For an explicitly identified card path, from Terminal in the extracted folder:
 
 ```sh
-bash 'Repair Bluetooth.command'
-```
-
-If card detection is ambiguous, pass its verified mounted root explicitly:
-
-```sh
-bash 'Repair Bluetooth.command' --volume /Volumes/NEXTBASE
+'Repair Bluetooth.app/Contents/MacOS/Launch' --volume /Volumes/NEXTBASE
 ```
 
 On Windows, from an **administrator Command Prompt** in the extracted kit root:
@@ -60,7 +61,7 @@ Nextbase622GW-Repair.exe --volume E:\
 
 Use your actual card path/letter. Do not guess a disk or serial device. The launcher keeps the computer awake while running; keep the cable and camera power connected as instructed.
 
-If multiple serial interfaces are present, disconnect unrelated devices or pass an already identified interface with `--port PATH`. List candidates without opening them using `python3 tools/capture_rtos.py --list`.
+If multiple serial interfaces are present, disconnect unrelated devices or pass an already identified interface with `--port PATH`. On Mac, list candidates without opening them using `'Repair Bluetooth.app/Contents/Resources/repair-engine' --passive-reader --list`.
 
 On Windows, identify the camera's USB COM interface in Device Manager, then use `Nextbase622GW-Repair.exe --volume E:\ --port COM7` with its actual port. Do not guess COM numbers or baud rates. Close other serial monitors before starting. The USB console driver must expose a COM interface; this kit does not install drivers or change PowerShell policy permanently.
 
@@ -114,8 +115,24 @@ python -m venv .venv-build
 .\.venv-build\Scripts\python.exe tools/build_windows.py
 ```
 
-The output is `dist/Nextbase622GW-Windows-0.5.0.zip` with the EXE, bundled runtime, repair resources, README, CLAUDE and source. `dist/windows-build.json` records the source commit in CI and runtime hashes. Python's redistribution license and the project license are included under `_internal/licenses/`.
+The output is `dist/Nextbase622GW-Windows-0.6.0.zip` with the EXE, bundled runtime, repair resources, README, CLAUDE and source. `dist/windows-build.json` records the source commit in CI and runtime hashes. Python's redistribution license and the project license are included under `_internal/licenses/`.
 
 [Native Windows CI](../.github/workflows/test.yml) extracts the ZIP, copies only the EXE and `_internal` into an isolated directory, and runs it with no Python on `PATH`. It verifies packaged assets, rejects tampered assets and noninteractive/automatic consent, and checks the console/admin manifest. The full shared consent/workflow tests run separately. These tests do not exercise camera hardware or the interactive UAC desktop prompt.
 
 The portable directory layout follows [PyInstaller's warning against elevated single-file extraction](https://pyinstaller.org/en/stable/operating-mode.html). There is no installer, self-update service or new camera payload. The source-only `Repair Bluetooth.cmd` remains usable with Python 3.9+ as administrator. Build requirements are pinned with PyPI wheel hashes; they are not user requirements.
+
+## Building the Mac apps
+
+End users download an app ZIP; Python is included. Maintainers build natively on **macOS with Python 3.12**, once per architecture:
+
+```sh
+python3.12 -m venv .venv-build
+.venv-build/bin/python -m pip install --require-hashes -r tools/macos-build-requirements.txt
+.venv-build/bin/python tools/build_macos.py
+```
+
+Outputs are `dist/Nextbase622GW-Mac-arm64-0.6.0.zip` or `dist/Nextbase622GW-Mac-x86_64-0.6.0.zip`, plus a build report with source commit/engine hashes in CI. The app embeds a non-elevated PyInstaller engine with Python, the unchanged camera resources, passive reader and redistribution licenses. Its Finder launcher opens the bundled command in Terminal through Launch Services; it does not require Automation permission. The app is ad-hoc signed, not notarized. No signing account or private certificate is embedded.
+
+CI builds on macOS 15 for both chips, extracts with `ditto`, moves the app into a path containing spaces/apostrophes, and runs with no Python on PATH. Tests check resources, signatures/executable permissions, noninteractive/automatic-consent refusal, and the bundled passive reader through a real pseudoterminal, including no transmission and terminal-setting restoration. A pseudoterminal is not a camera. Hardware repair and Gatekeeper approval on a downloaded/quarantined app remain separate from these checks.
+
+The source-only ZIP still includes `Repair Bluetooth.command` and `Repair Bluetooth.cmd` for Python 3.9+ users. No camera payload or destructive consent rule changes with packaging. Extract the Mac ZIP using Finder/Archive Utility or `ditto -x -k` to preserve executable permissions and signing metadata.
