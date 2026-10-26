@@ -56,7 +56,7 @@ class NativeMacAppTests(unittest.TestCase):
     def setUp(self):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
-        self.directory = Path(self.temporary.name)
+        self.directory = Path(self.temporary.name).resolve()
         self.app = self.directory / "Moved repair's folder/Repair Bluetooth.app"
         self.app.parent.mkdir()
         subprocess.run(["/usr/bin/ditto", os.environ["NB_REPAIR_APP"], str(self.app)], check=True)

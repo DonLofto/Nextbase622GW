@@ -54,7 +54,7 @@ def main():
         }))
         executable.write_text('''#!/bin/bash
 set -eu
-CONTENTS=$(cd -P "$(dirname "$0")/.." && pwd)
+CONTENTS=$(cd -P "$(/usr/bin/dirname "$0")/.." && pwd)
 if [ "$#" -gt 0 ]; then
     exec /usr/bin/caffeinate -i "$CONTENTS/Resources/repair-engine" "$@"
 fi
@@ -63,7 +63,7 @@ exec /usr/bin/open -a Terminal "$CONTENTS/Resources/Repair Bluetooth.command"
         terminal = files / "Repair Bluetooth.command"
         terminal.write_text('''#!/bin/bash
 set -eu
-RESOURCES=$(cd -P "$(dirname "$0")" && pwd)
+RESOURCES=$(cd -P "$(/usr/bin/dirname "$0")" && pwd)
 exec /usr/bin/caffeinate -i "$RESOURCES/repair-engine" "$@"
 ''', encoding="utf-8")
         executable.chmod(0o755)

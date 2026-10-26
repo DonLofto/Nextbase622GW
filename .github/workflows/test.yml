@@ -65,6 +65,7 @@ jobs:
 
   mac-app:
     strategy:
+      fail-fast: false
       matrix:
         include:
           - os: macos-15
